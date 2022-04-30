@@ -1,27 +1,13 @@
-! This file is part of xtb.
-!
-! Copyright (C) 2019-2020 Sebastian Ehlert
-!
-! xtb is free software: you can redistribute it and/or modify it under
-! the terms of the GNU Lesser General Public License as published by
-! the Free Software Foundation, either version 3 of the License, or
-! (at your option) any later version.
-!
-! xtb is distributed in the hope that it will be useful,
-! but WITHOUT ANY WARRANTY; without even the implied warranty of
-! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-! GNU Lesser General Public License for more details.
-!
-! You should have received a copy of the GNU Lesser General Public License
-! along with xtb.  If not, see <https://www.gnu.org/licenses/>.
+
+!> The original source code can be found under the GNU LGPL 3.0 license
+!> at https://github.com/grimme-lab/xtb
 
 !> TODO: GFN0-xTB parametrisation data
-module xtb_xtb_gfn0
-   use xtb_mctc_accuracy, only : wp
-   use xtb_param_atomicrad, only : atomicRad
-   use xtb_type_param, only : TxTBParameter
-   use xtb_xtb_data
-   use xtb_xtb_gfn2, only : setGFN2ReferenceOcc
+module gfn0_parameter
+
+   use iso_fortran_env, only: wp=>real64
+   use gfn0_types 
+
    implicit none
    private
 
@@ -31,11 +17,12 @@ module xtb_xtb_gfn0
 
    interface initGFN0
       module procedure :: initData
-      module procedure :: initRepulsion
-      module procedure :: initCoulomb
-      module procedure :: initHamiltonian
+      module procedure :: initGFN0Repulsion
+      module procedure :: initGFN0Coulomb
+      module procedure :: initGFN0Hamiltonian
    end interface initGFN0
 
+!========================================================================================!
    real(wp), parameter :: enshell(4) = [0.6_wp, -0.1_wp, -0.2_wp, -0.2_wp]
    real(wp), parameter :: kshell(4) = [2.0000000_wp, 2.4868000_wp, 2.2700000_wp, 0.6000000_wp]
 
@@ -733,14 +720,97 @@ module xtb_xtb_gfn0
       &-0.5902190_wp, 0.0731828_wp, 0.1795929_wp,-0.0924653_wp,-0.3033414_wp, &
       &-0.0946010_wp]
 
+   !> Reference occupation of the atom
+   real(wp), parameter :: referenceOcc(0:2, 1:maxElem) = reshape([&
+      & 1.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 0.0_wp, 0.0_wp,  1.0_wp, 0.0_wp, 0.0_wp, &
+      & 2.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 1.0_wp, 0.0_wp,  1.0_wp, 3.0_wp, 0.0_wp, &
+      & 1.5_wp, 3.5_wp, 0.0_wp,  2.0_wp, 4.0_wp, 0.0_wp,  2.0_wp, 5.0_wp, 0.0_wp, &
+      & 2.0_wp, 6.0_wp, 0.0_wp,  1.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 0.0_wp, 0.0_wp, &
+      & 2.0_wp, 1.0_wp, 0.0_wp,  1.5_wp, 2.5_wp, 0.0_wp,  1.5_wp, 3.5_wp, 0.0_wp, &
+      & 2.0_wp, 4.0_wp, 0.0_wp,  2.0_wp, 5.0_wp, 0.0_wp,  2.0_wp, 6.0_wp, 0.0_wp, &
+      & 1.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 0.0_wp, 0.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 2.0_wp,  1.0_wp, 1.0_wp, 3.0_wp,  1.0_wp, 1.0_wp, 4.0_wp, &
+      & 1.0_wp, 1.0_wp, 5.0_wp,  1.0_wp, 1.0_wp, 6.0_wp,  1.0_wp, 1.0_wp, 7.0_wp, &
+      & 1.0_wp, 1.0_wp, 8.0_wp,  1.0_wp, 0.0_wp,10.0_wp,  2.0_wp, 0.0_wp, 0.0_wp, &
+      & 2.0_wp, 1.0_wp, 0.0_wp,  1.5_wp, 2.5_wp, 0.0_wp,  1.5_wp, 3.5_wp, 0.0_wp, &
+      & 2.0_wp, 4.0_wp, 0.0_wp,  2.0_wp, 5.0_wp, 0.0_wp,  2.0_wp, 6.0_wp, 0.0_wp, &
+      & 1.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 0.0_wp, 0.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 2.0_wp,  1.0_wp, 1.0_wp, 3.0_wp,  1.0_wp, 1.0_wp, 4.0_wp, &
+      & 1.0_wp, 1.0_wp, 5.0_wp,  1.0_wp, 1.0_wp, 6.0_wp,  1.0_wp, 1.0_wp, 7.0_wp, &
+      & 1.0_wp, 1.0_wp, 8.0_wp,  1.0_wp, 0.0_wp,10.0_wp,  2.0_wp, 0.0_wp, 0.0_wp, &
+      & 2.0_wp, 1.0_wp, 0.0_wp,  2.0_wp, 2.0_wp, 0.0_wp,  2.0_wp, 3.0_wp, 0.0_wp, &
+      & 2.0_wp, 4.0_wp, 0.0_wp,  2.0_wp, 5.0_wp, 0.0_wp,  2.0_wp, 6.0_wp, 0.0_wp, &
+      & 1.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 0.0_wp, 0.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp, &
+      & 1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 1.0_wp,  1.0_wp, 1.0_wp, 2.0_wp, &
+      & 1.0_wp, 1.0_wp, 3.0_wp,  1.0_wp, 1.0_wp, 4.0_wp,  1.0_wp, 1.0_wp, 5.0_wp, &
+      & 1.0_wp, 1.0_wp, 6.0_wp,  1.0_wp, 1.0_wp, 7.0_wp,  1.0_wp, 1.0_wp, 8.0_wp, &
+      & 1.0_wp, 0.0_wp,10.0_wp,  2.0_wp, 0.0_wp, 0.0_wp,  2.0_wp, 1.0_wp, 0.0_wp, &
+      & 2.0_wp, 2.0_wp, 0.0_wp,  2.0_wp, 3.0_wp, 0.0_wp,  2.0_wp, 4.0_wp, 0.0_wp, &
+      & 2.0_wp, 5.0_wp, 0.0_wp,  2.0_wp, 6.0_wp, 0.0_wp], shape(referenceOcc))
+
+
+   !> Atomic radii
+   real(wp), parameter :: atomicRad(1:118) = aatoau * [ &
+      & 0.32_wp, 0.37_wp, 1.30_wp, 0.99_wp, 0.84_wp, 0.75_wp, 0.71_wp, 0.64_wp, &
+      & 0.60_wp, 0.62_wp, 1.60_wp, 1.40_wp, 1.24_wp, 1.14_wp, 1.09_wp, 1.04_wp, &
+      & 1.00_wp, 1.01_wp, 2.00_wp, 1.74_wp, 1.59_wp, 1.48_wp, 1.44_wp, 1.30_wp, &
+      & 1.29_wp, 1.24_wp, 1.18_wp, 1.17_wp, 1.22_wp, 1.20_wp, 1.23_wp, 1.20_wp, &
+      & 1.20_wp, 1.18_wp, 1.17_wp, 1.16_wp, 2.15_wp, 1.90_wp, 1.76_wp, 1.64_wp, &
+      & 1.56_wp, 1.46_wp, 1.38_wp, 1.36_wp, 1.34_wp, 1.30_wp, 1.36_wp, 1.40_wp, &
+      & 1.42_wp, 1.40_wp, 1.40_wp, 1.37_wp, 1.36_wp, 1.36_wp, 2.38_wp, 2.06_wp, &
+      & 1.94_wp, 1.84_wp, 1.90_wp, 1.88_wp, 1.86_wp, 1.85_wp, 1.83_wp, 1.82_wp, &
+      & 1.81_wp, 1.80_wp, 1.79_wp, 1.77_wp, 1.77_wp, 1.78_wp, 1.74_wp, 1.64_wp, &
+      & 1.58_wp, 1.50_wp, 1.41_wp, 1.36_wp, 1.32_wp, 1.30_wp, 1.30_wp, 1.32_wp, &
+      & 1.44_wp, 1.45_wp, 1.50_wp, 1.42_wp, 1.48_wp, 1.46_wp, 2.42_wp, 2.11_wp, &
+      & 2.01_wp, 1.90_wp, 1.84_wp, 1.83_wp, 1.80_wp, 1.80_wp, 1.73_wp, 1.68_wp, &
+      & 1.68_wp, 1.68_wp, 1.65_wp, 1.67_wp, 1.73_wp, 1.76_wp, 1.61_wp, 1.57_wp, &
+      & 1.49_wp, 1.43_wp, 1.41_wp, 1.34_wp, 1.29_wp, 1.28_wp, 1.21_wp, 1.22_wp, &
+      & 1.36_wp, 1.43_wp, 1.62_wp, 1.75_wp, 1.65_wp, 1.57_wp]
+
+
+   !> Pauling electronegativities, used for the covalent coordination number.
+   real(wp), parameter :: paulingEN(1:118) = [ &
+      & 2.20_wp,3.00_wp, & ! H,He
+      & 0.98_wp,1.57_wp,2.04_wp,2.55_wp,3.04_wp,3.44_wp,3.98_wp,4.50_wp, & ! Li-Ne
+      & 0.93_wp,1.31_wp,1.61_wp,1.90_wp,2.19_wp,2.58_wp,3.16_wp,3.50_wp, & ! Na-Ar
+      & 0.82_wp,1.00_wp, & ! K,Ca
+      &                 1.36_wp,1.54_wp,1.63_wp,1.66_wp,1.55_wp, & ! Sc-
+      &                 1.83_wp,1.88_wp,1.91_wp,1.90_wp,1.65_wp, & ! -Zn
+      &                 1.81_wp,2.01_wp,2.18_wp,2.55_wp,2.96_wp,3.00_wp, & ! Ga-Kr
+      & 0.82_wp,0.95_wp, & ! Rb,Sr
+      &                 1.22_wp,1.33_wp,1.60_wp,2.16_wp,1.90_wp, & ! Y-
+      &                 2.20_wp,2.28_wp,2.20_wp,1.93_wp,1.69_wp, & ! -Cd
+      &                 1.78_wp,1.96_wp,2.05_wp,2.10_wp,2.66_wp,2.60_wp, & ! In-Xe
+      & 0.79_wp,0.89_wp, & ! Cs,Ba
+      &         1.10_wp,1.12_wp,1.13_wp,1.14_wp,1.15_wp,1.17_wp,1.18_wp, & ! La-Eu
+      &         1.20_wp,1.21_wp,1.22_wp,1.23_wp,1.24_wp,1.25_wp,1.26_wp, & ! Gd-Yb
+      &                 1.27_wp,1.30_wp,1.50_wp,2.36_wp,1.90_wp, & ! Lu-
+      &                 2.20_wp,2.20_wp,2.28_wp,2.54_wp,2.00_wp, & ! -Hg
+      &                 1.62_wp,2.33_wp,2.02_wp,2.00_wp,2.20_wp,2.20_wp, & ! Tl-Rn
+      ! only dummies below
+      & 1.50_wp,1.50_wp, & ! Fr,Ra
+      &         1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp, & ! Ac-Am
+      &         1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp, & ! Cm-No
+      &                 1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp, & ! Rf-
+      &                 1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp, & ! Rf-Cn
+      &                 1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp,1.50_wp ] ! Nh-Og
+
+
+
+!========================================================================================!
 
 contains
-
+!========================================================================================!
+!========================================================================================!
 
 subroutine initData(self)
 
    !> Data instance
-   type(TxTBData), intent(out) :: self
+   type(TxTBData_mod), intent(out) :: self
 
    self%name = 'GFN0-xTB'
    self%level = 0
@@ -752,19 +822,68 @@ subroutine initData(self)
 
 end subroutine initData
 
-
-subroutine initRepulsion(self)
+!========================================================================================!
+subroutine initGFN0Repulsion(self)
 
    !> Data instance
    type(TRepulsionData), intent(out) :: self
 
-   call init(self, kExp, kExpLight, rExp, 0.0_wp, repAlpha, repZeff, &
+   call initRepulsion(self, kExp, kExpLight, rExp, 0.0_wp, repAlpha, repZeff, &
       & electronegativity)
+
+end subroutine initGFN0Repulsion
+
+subroutine initRepulsion(self, inp_kExp, inp_kExpLight, inp_rExp, inp_enScale, &
+      & inp_alpha, inp_zeff, inp_electronegativity)
+
+   !> Data instance
+   type(TRepulsionData), intent(out) :: self
+
+   !>
+   real(wp), intent(in) :: inp_kExp
+
+   !>
+   real(wp), intent(in) :: inp_kExpLight
+
+   !>
+   real(wp), intent(in) :: inp_rExp
+
+   !>
+   real(wp), intent(in) :: inp_enScale
+
+   !>
+   real(wp), intent(in) :: inp_alpha(:)
+
+   !>
+   real(wp), intent(in) :: inp_zeff(:)
+
+   !>
+   real(wp), intent(in), optional :: inp_electronegativity(:)
+
+   integer :: maxElem
+
+   maxElem = min(size(inp_alpha), size(inp_zeff))
+   if (present(inp_electronegativity)) then
+      maxElem = min(maxElem, size(inp_electronegativity))
+   end if
+
+   self%cutoff = 40.0_wp
+   self%kExp = inp_kExp
+   self%kExpLight = inp_kExpLight
+   self%rExp = inp_rExp
+   self%enScale = inp_enScale
+   self%alpha = inp_alpha(:maxElem)
+   self%zeff = inp_zeff(:maxElem)
+   if (present(inp_electronegativity)) then
+      self%electronegativity = inp_electronegativity(:maxElem)
+   else
+      self%electronegativity = paulingEN(:maxElem)
+   end if
 
 end subroutine initRepulsion
 
-
-subroutine initCoulomb(self, nShell)
+!========================================================================================!
+subroutine initGFN0Coulomb(self, nShell)
 
    !> Data instance
    type(TCoulombData), intent(out) :: self
@@ -777,10 +896,68 @@ subroutine initCoulomb(self, nShell)
    self%kCN = eeqkCN(1:maxElem)
    self%chargeWidth = eeqAlp(1:maxElem)
 
+end subroutine initGFN0Coulomb
+
+
+subroutine initCoulomb(self, nShell, chemicalHardness, shellHardness, &
+      & thirdOrderAtom, electronegativity, kCN, chargeWidth)
+
+   !> Data instance
+   type(TCoulombData), intent(out) :: self
+
+   !>
+   integer, intent(in) :: nShell(:)
+
+   !>
+   real(wp), intent(in) :: chemicalHardness(:)
+
+   !>
+   real(wp), intent(in), optional :: shellHardness(:, :)
+
+   !>
+   real(wp), intent(in), optional :: thirdOrderAtom(:)
+
+   !>
+   real(wp), intent(in), optional :: electronegativity(:)
+
+   !>
+   real(wp), intent(in), optional :: kCN(:)
+
+   !>
+   real(wp), intent(in), optional :: chargeWidth(:)
+
+   integer :: maxElem
+
+   maxElem = size(chemicalHardness)
+   if (present(shellHardness)) then
+      maxElem = min(maxElem, size(shellHardness, dim=2))
+   end if
+   if (present(thirdOrderAtom)) then
+      maxElem = min(maxElem, size(thirdOrderAtom))
+   end if
+   if (present(electronegativity).and.present(kCN).and.present(chargeWidth)) then
+      maxElem = min(maxElem, size(electronegativity), size(kCN), size(chargeWidth))
+   end if
+
+   self%chemicalHardness = chemicalHardness(:maxElem)
+   if (present(shellHardness)) then
+      self%shellHardness = shellHardness(:, :maxElem)
+   end if
+   if (present(thirdOrderAtom)) then
+      self%thirdOrderAtom = thirdOrderAtom(:maxElem)
+   end if
+   if (present(electronegativity).and.present(kCN).and.present(chargeWidth)) then
+      self%electronegativity = electronegativity(:maxElem)
+      self%kCN = kCN(:maxElem)
+      self%chargeWidth = chargeWidth(:maxElem)
+   end if
+
 end subroutine initCoulomb
 
 
-subroutine initHamiltonian(self, nShell)
+
+!========================================================================================!
+subroutine initGFN0Hamiltonian(self, nShell)
 
    !> Data instance
    type(THamiltonianData), intent(out) :: self
@@ -827,10 +1004,70 @@ subroutine initHamiltonian(self, nShell)
    allocate(self%numberOfPrimitives(mShell, maxElem))
    call setGFN0NumberOfPrimitives(self, nShell)
 
-end subroutine initHamiltonian
+end subroutine initGFN0Hamiltonian
+
+!> Transform a data array from angular momenta to shell number references
+subroutine angToShellData(kDat, nShell, angShell, angDat)
+
+   !> Data in terms of shell number of each species
+   real(wp), intent(out) :: kDat(:, :)
+
+   !> Number of shells for each species
+   integer, intent(in) :: nShell(:)
+
+   !> Angular momenta of each shell
+   integer, intent(in) :: angShell(:, :)
+
+   !> Data in terms of angular momenta of each shell
+   real(wp), intent(in) :: angDat(0:, :)
+
+   integer :: nElem, iZp, iSh, lAng, iKind
+
+   nElem = min(size(kDat, dim=2), size(nShell), size(angShell, dim=2), &
+      & size(angDat, dim=2))
+
+   kDat(:, :) = 0.0_wp
+   do iZp = 1, nElem
+      do iSh = 1, nShell(iZp)
+         lAng = angShell(iSh, iZp)
+         kDat(iSh, iZp) = angDat(lAng, iZp)
+      end do
+   end do
+
+end subroutine angToShellData
+
+!> Generator for valence shell data from the angular momenta of the shells
+subroutine generateValenceShellData(valenceShell, nShell, angShell)
+
+   !> Valency character of each shell
+   integer, intent(out) :: valenceShell(:, :)
+
+   !> Number of shells for each atom
+   integer, intent(in) :: nShell(:)
+
+   !> Angular momenta of each shell
+   integer, intent(in) :: angShell(:, :)
+
+   integer :: lAng, iZp, iSh
+   logical :: valShell(0:3)
+
+   valenceShell(:, :) = 0
+   do iZp = 1, size(nShell, dim=1)
+      valShell(:) = .true.
+      do iSh = 1, nShell(iZp)
+         lAng = angShell(iSh, iZp)
+         if (valShell(lAng)) then
+            valShell(lAng) = .false.
+            valenceShell(iSh, iZp) = 1
+         end if
+      end do
+   end do
+
+end subroutine generateValenceShellData
 
 
-!>
+
+!========================================================================================!
 subroutine setGFN0NumberOfPrimitives(self, nShell)
 
    !> Data instance
@@ -879,7 +1116,7 @@ subroutine setGFN0NumberOfPrimitives(self, nShell)
 
 end subroutine setGFN0NumberOfPrimitives
 
-
+!========================================================================================!
 subroutine setGFN0PairParam(pairParam)
 
    real(wp), allocatable :: pairParam(:, :)
@@ -927,5 +1164,30 @@ end function dBlock
 
 end subroutine setGFN0PairParam
 
+!========================================================================================!
+subroutine setGFN2ReferenceOcc(self, nShell)
 
-end module xtb_xtb_gfn0
+   !> Data instance
+   type(THamiltonianData), intent(inout) :: self
+
+   !> Number of shells
+   integer, intent(in) :: nShell(:)
+
+   integer :: lAng, iZp, iSh
+   logical :: valShell(0:3)
+
+   self%referenceOcc(:, :) = 0.0_wp
+   do iZp = 1, maxElem
+      do iSh = 1, nShell(iZp)
+         lAng = self%angShell(iSh, iZp)
+         if (self%valenceShell(iSh, iZp) /= 0) then
+            self%referenceOcc(iSh, iZp) = referenceOcc(lAng, iZp)
+         end if
+      end do
+   end do
+
+end subroutine setGFN2ReferenceOcc
+
+!========================================================================================!
+
+end module gfn0_parameter

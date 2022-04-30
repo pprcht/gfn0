@@ -15,7 +15,11 @@
 ! You should have received a copy of the GNU Lesser General Public License
 ! along with xtb.  If not, see <https://www.gnu.org/licenses/>.
 
-module xtb_peeq
+
+!> The original source code can be found under the GNU LGPL 3.0 license
+!> at https://github.com/grimme-lab/xtb
+
+module gfn0_main
    use xtb_mctc_accuracy, only : wp
    use xtb_mctc_convert
    use xtb_mctc_la
@@ -34,7 +38,7 @@ module xtb_peeq
    implicit none
    private
 
-   public :: peeq
+   public :: gfn0
 
    !> print the different gradient contributions (for debugging)
    logical,parameter,private :: gpr =.false.
@@ -44,7 +48,7 @@ module xtb_peeq
 
 contains
 
-subroutine peeq &
+subroutine gfn0 &
       (env,mol,wfn,basis,xtbData,gbsa,egap,et,prlevel,grd,ccm,acc,etot,gradient,sigma,res)
 
 ! ------------------------------------------------------------------------
@@ -81,7 +85,7 @@ subroutine peeq &
    type(TEnvironment), intent(inout)    :: env
    type(TMolecule),  intent(in) :: mol     !< molecular structure infomation
    type(TBasisset),  intent(in) :: basis   !< basis set
-   type(TxTBData), intent(in) :: xtbData
+   type(TxTBData_mod), intent(in) :: xtbData
    real(wp),intent(in)            :: et      !< electronic temperature
    integer, intent(in)            :: prlevel !< amount of printout
    logical, intent(in)            :: grd     !< toggles gradient calculation
@@ -150,7 +154,7 @@ subroutine peeq &
    real(wp) :: eel,ed,ees,exb,ep
 
 ! ---------------------------------------
-!  PEEQ information
+!  GFN0 information
 ! ---------------------------------------
    real(wp) , allocatable, dimension(:)     :: rab0
    real(wp) , allocatable, dimension(:,:,:) :: grab0
@@ -171,7 +175,7 @@ subroutine peeq &
    logical :: exitRun
 
 ! ---------------------------------------
-!  PEEQ q dependent H0
+!  GFN0 q dependent H0
 ! ---------------------------------------
    real(wp),allocatable, dimension(:)     :: qeeq
    real(wp),allocatable, dimension(:,:,:) :: dqdr
@@ -536,7 +540,7 @@ subroutine peeq &
    tmp = wfn%focc*wfn%emo*evtoau
    ! setup energy weighted density matrix = pew
    call dmat(nao,tmp,wfn%C,pew)
-   if (ccm) then
+   if (ccm) then  !> this one is also used for the molecular case
       call ccm_build_dSH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
          & dSEdcn, dSEdq, mol%n, basis, intcut, nao, nbf, mol%at, mol%xyz, &
          & mol%lattice, wfn%P, Pew, gradient, sigma, dhdcn, dhdq, wsc)
@@ -623,7 +627,7 @@ end associate
 
    if (profile) call timer%deallocate
 
-end subroutine peeq
+end subroutine gfn0
 
 ! repulsion
 pure subroutine drep_grad(repData,mol,trans,erep,gradient,sigma)
@@ -1687,4 +1691,4 @@ subroutine pbc_build_dSH0(nShell, hData, selfEnergy, dSEdcn, dSEdq, nat, basis, 
 end subroutine pbc_build_dSH0
 
 
-end module xtb_peeq
+end module gfn0_main

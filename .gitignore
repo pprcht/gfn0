@@ -1,0 +1,9 @@
+*.o
+*.mod
+*.tgz
+github_bin/
+build_majestix
+build_commands
+_build*
+src/gfn0
+bin/

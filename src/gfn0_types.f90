@@ -259,6 +259,37 @@ module gfn0_types
 
 !========================================================================================!
 
+   type :: scc_results
+      real(wp) :: e_atom = 0.0_wp
+      real(wp) :: e_elec = 0.0_wp
+      real(wp) :: e_total = 0.0_wp
+      real(wp) :: e_rep = 0.0_wp
+      real(wp) :: e_es = 0.0_wp
+      real(wp) :: e_aes = 0.0_wp
+      real(wp) :: e_axc = 0.0_wp
+      real(wp) :: e_disp = 0.0_wp
+      real(wp) :: e_xb = 0.0_wp
+      real(wp) :: g_born = 0.0_wp
+      real(wp) :: g_sasa = 0.0_wp
+      real(wp) :: g_hb = 0.0_wp
+      real(wp) :: g_shift = 0.0_wp
+      real(wp) :: hl_gap = 0.0_wp
+      real(wp) :: dipole(3) = (/0.0_wp,0.0_wp,0.0_wp/)
+      real(wp) :: molpol = 0.0_wp
+      real(wp) :: g_solv = 0.0_wp
+      real(wp) :: g_total = 0.0_wp
+      real(wp) :: gnorm = 0.0_wp
+      logical  :: converged = .true.
+      real(wp) :: e_bond = 0.0_wp
+      real(wp) :: e_angl = 0.0_wp
+      real(wp) :: e_tors = 0.0_wp
+      real(wp) :: e_hb = 0.0_wp
+      real(wp) :: e_batm = 0.0_wp
+      real(wp) :: e_ext = 0.0_wp
+   end type scc_results
+
+!========================================================================================!
+
 contains
 !========================================================================================!
 !========================================================================================!
@@ -330,6 +361,28 @@ subroutine writeInfo(self, unit, num)
 
    write(unit, '(a)')
 
+contains
+subroutine generic_header(iunit,string,width,offset)
+implicit none
+integer,intent(in) :: iunit
+integer,intent(in) :: offset
+integer,intent(in) :: width
+character(len=*),intent(in) :: string
+character(len=width) :: dum1,dum2
+character(len=2*width) :: outstring
+character(len=width) :: formatstr
+integer :: strlen,ifront,iback
+strlen = len(string)
+ifront = (width - strlen)/2
+iback  = width - ifront - strlen
+write(dum1,*) width
+write(dum2,*) offset
+write(formatstr,'(i0,"x,a,",i0,"x")') ifront,iback
+write(outstring,'("|",'//formatstr//',"|")') string
+write(iunit,'('//dum2//'x,1x,'//dum1//'("-"),1x)')
+write(iunit,'('//dum2//'x,a)') trim(outstring)
+write(iunit,'('//dum2//'x,1x,'//dum1//'("-"),1x)')
+end subroutine generic_header
 end subroutine writeInfo
 
 

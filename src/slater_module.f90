@@ -9,7 +9,7 @@
 !> Robert F. Stewart, Small Gaussian Expansions of Slater-Type Orbitals,
 !> J. Chem. Phys. 52, 431-438 (1970). DOI: 10.1063/1.1672702
 module slater_module
-   use iso_fortran_env, only : wp
+   use iso_fortran_env, only : wp=>real64
    implicit none
    private
 

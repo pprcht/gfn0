@@ -23,6 +23,11 @@ module gfn0_parameter
    end interface initGFN0
 
 !========================================================================================!
+ !> convert bohr (a.u.) to Ångström and back
+   real(wp),private,parameter :: autoaa = 0.52917726_wp
+   real(wp),private,parameter :: aatoau = 1.0_wp/autoaa
+
+!========================================================================================!
    real(wp), parameter :: enshell(4) = [0.6_wp, -0.1_wp, -0.2_wp, -0.2_wp]
    real(wp), parameter :: kshell(4) = [2.0000000_wp, 2.4868000_wp, 2.2700000_wp, 0.6000000_wp]
 

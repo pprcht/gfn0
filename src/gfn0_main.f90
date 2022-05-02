@@ -35,6 +35,9 @@ module gfn0_main
    use xtb_xtb_eeq
    use xtb_xtb_hamiltonian, only : getSelfEnergy
    use xtb_type_wsc, only : tb_wsc
+
+   use iso_fortran_env, only: wp=>real64, stdout=>output_unit
+
    implicit none
    private
 
@@ -49,7 +52,9 @@ module gfn0_main
 contains
 
 subroutine gfn0 &
-      (env,mol,wfn,basis,xtbData,gbsa,egap,et,prlevel,grd,ccm,acc,etot,gradient,sigma,res)
+!      (env,mol,wfn,basis,xtbData,gbsa,egap,et,prlevel,grd,ccm,acc,etot,gradient,sigma,res)
+      (nat,at,xyz,chrg,uhf,wfn,basis,xtbData,egap,et,prlevel,grd,acc,etot,gradient,res)
+
 
 ! ------------------------------------------------------------------------
 !  Class definitions
@@ -82,15 +87,20 @@ subroutine gfn0 &
 ! ------------------------------------------------------------------------
 !  INPUT
 ! ------------------------------------------------------------------------
-   type(TEnvironment), intent(inout)    :: env
-   type(TMolecule),  intent(in) :: mol     !< molecular structure infomation
-   type(TBasisset),  intent(in) :: basis   !< basis set
-   type(TxTBData_mod), intent(in) :: xtbData
+!   type(TEnvironment), intent(inout)    :: env
+!   type(TMolecule),  intent(in) :: mol     !< molecular structure infomation
+   integer, intent(in)            :: nat     !< number of atoms
+   integer, intent(in)            :: at(nat) !< atom types by atomic number 
+   real(wp),intent(in)            :: xyz(3,nat) !< Cartesian coordinates (a.u.)
+   integer, intent(in)            :: chrg    !< molecular charge
+   integer, intent(in)            :: uhf     !< n(alpha) - n(beta)
+   type(TBasisset),  intent(in)   :: basis   !< basis set info
+   type(TxTBData_mod), intent(in) :: xtbData !< main data/parameter frame 
    real(wp),intent(in)            :: et      !< electronic temperature
    integer, intent(in)            :: prlevel !< amount of printout
    logical, intent(in)            :: grd     !< toggles gradient calculation
    real(wp),intent(in)            :: acc     !< numerical accuracy
-   logical, intent(in)            :: ccm     !< use cyclic cluster model
+!   logical, intent(in)            :: ccm     !< use cyclic cluster model
 
 ! ------------------------------------------------------------------------
 !  INPUT/OUTPUT
@@ -99,7 +109,7 @@ subroutine gfn0 &
    real(wp),intent(inout)                    :: egap !< HOMO-LUMO gap
    real(wp),intent(inout),dimension(3,mol%n) :: gradient    !< molecular gradient
    type(TWavefunction),intent(inout)       :: wfn  !< TB-wavefunction
-   type(TBorn),allocatable,intent(inout) :: gbsa
+!   type(TBorn),allocatable,intent(inout) :: gbsa
 ! ------------------------------------------------------------------------
 !  OUTPUT
 ! ------------------------------------------------------------------------
@@ -145,7 +155,7 @@ subroutine gfn0 &
    logical :: fail
 
    ! timer
-   type(tb_timer) :: timer
+!   type(tb_timer) :: timer
    ! Fermi smearing variables
    real(wp) :: efa,efb,nfoda,nfodb,ga,gb
    ! numerical thresholds
@@ -188,9 +198,9 @@ subroutine gfn0 &
 ! ---------------------------------------
 !  PEEQ WSC information
 ! ---------------------------------------
-   real(wp),dimension(3,3),intent(inout)     :: sigma
-   type(TLatticePoint) :: latp
-   real(wp), allocatable :: trans(:, :)
+!   real(wp),dimension(3,3),intent(inout)     :: sigma
+!   type(TLatticePoint) :: latp
+!   real(wp), allocatable :: trans(:, :)
 
 ! For eigenvalues of S via dsyev routine
    real(wp),allocatable,dimension(:,:)       :: Stmp
@@ -211,20 +221,20 @@ subroutine gfn0 &
    character(len=*),parameter :: chrfmt = &
       '(10x,":",2x,a,a18,      10x,":")'
 
-   interface
-      subroutine generate_wsc(mol,wsc)
-         import :: TMolecule, tb_wsc
-         type(TMolecule), intent(in) :: mol
-         type(tb_wsc),    intent(inout) :: wsc
-      end subroutine generate_wsc
-   end interface
-
-   type(tb_wsc) :: wsc
+!   interface
+!      subroutine generate_wsc(mol,wsc)
+!         import :: TMolecule, tb_wsc
+!         type(TMolecule), intent(in) :: mol
+!         type(tb_wsc),    intent(inout) :: wsc
+!      end subroutine generate_wsc
+!   end interface
+!
+!   type(tb_wsc) :: wsc
 
 ! ---------------------------------------
 !  EEQ/GBSA information
 ! ---------------------------------------
-   real(wp) :: gsolv
+!   real(wp) :: gsolv
 
    associate( nao => basis%nao, &
          &    nbf => basis%nbf, &
@@ -232,18 +242,18 @@ subroutine gfn0 &
          &    naop => basis%nao*(basis%nao+1)/2, &
          &    nbfp => basis%nbf*(basis%nbf+1)/2)
 
-   if (ccm) &
-      call generate_wsc(mol, wsc)
+!   if (ccm) &
+!      call generate_wsc(mol, wsc)
 
-   if (profile) then
-      if (allocated(gbsa)) then
-         call timer%new(9,.false.)
-      else
-         call timer%new(8,.false.)
-      endif
-   endif
-   if (profile) call timer%measure(1,"EHT setup")
-
+!   if (profile) then
+!      if (allocated(gbsa)) then
+!         call timer%new(9,.false.)
+!      else
+!         call timer%new(8,.false.)
+!      endif
+!   endif
+!   if (profile) call timer%measure(1,"EHT setup")
+!
    etot  = 0.0_wp
    dipol = 0.0_wp
    exb   = 0.0_wp
@@ -271,7 +281,7 @@ subroutine gfn0 &
    neglect2=neglect*10.0_wp
    scfconv=1.e-6_wp*acc
 
-   call init(latp, env, mol, 60.0_wp)
+!   call init(latp, env, mol, 60.0_wp)
 
 ! ---------------------------------------
 !  IMPORTANT FACT: H is given in eV
@@ -321,24 +331,24 @@ subroutine gfn0 &
    endif
 
    if (prlevel > 1) then
-      write(env%unit,'(/,10x,51("."))')
-      write(env%unit,'(10x,":",22x,a,22x,":")') "SETUP"
-      write(env%unit,'(10x,":",49("."),":")')
-      write(env%unit,intfmt) "# basis functions  ",basis%nbf
-      write(env%unit,intfmt) "# atomic orbitals  ",basis%nao
-      write(env%unit,intfmt) "# shells           ",basis%nshell
-      write(env%unit,intfmt) "# electrons        ",wfn%nel
-      if (mol%npbc > 0) &
-      write(env%unit,chrfmt) "PBC by CCM         ",bool2string(ccm)
-      write(env%unit,dblfmt) "electronic temp.   ",et,      "K   "
-      write(env%unit,dblfmt) "accuracy           ",acc,     "    "
-      write(env%unit,scifmt) "-> integral cutoff ",intcut,  "    "
-      write(env%unit,scifmt) "-> integral neglect",neglect, "    "
-      write(env%unit,'(10x,51("."))')
+      write(stdout,'(/,10x,51("."))')
+      write(stdout,'(10x,":",22x,a,22x,":")') "SETUP"
+      write(stdout,'(10x,":",49("."),":")')
+      write(stdout,intfmt) "# basis functions  ",basis%nbf
+      write(stdout,intfmt) "# atomic orbitals  ",basis%nao
+      write(stdout,intfmt) "# shells           ",basis%nshell
+      write(stdout,intfmt) "# electrons        ",wfn%nel
+      !if (mol%npbc > 0) &
+      !write(stdout,chrfmt) "PBC by CCM         ",bool2string(ccm)
+      write(stdout,dblfmt) "electronic temp.   ",et,      "K   "
+      write(stdout,dblfmt) "accuracy           ",acc,     "    "
+      write(stdout,scifmt) "-> integral cutoff ",intcut,  "    "
+      write(stdout,scifmt) "-> integral neglect",neglect, "    "
+      write(stdout,'(10x,51("."))')
    endif
 
-   if (profile) call timer%measure(1)
-   if (profile) call timer%measure(2,"Coordination number")
+!   if (profile) call timer%measure(1)
+!   if (profile) call timer%measure(2,"Coordination number")
 ! ---------------------------------------
 !  Get CN(1:n) + dcndr(3,1:n,1:n) under pbc
 ! ---------------------------------------
@@ -347,17 +357,17 @@ subroutine gfn0 &
       & cn, dcndr, dcndL)
    call cutCoordinationNumber(mol%n, cn, dcndr, dcndL, maxCN=8.0_wp)
 
-   if (profile) call timer%measure(2)
-   if (profile) call timer%measure(4,"D4 Dispersion")
+!   if (profile) call timer%measure(2)
+!   if (profile) call timer%measure(4,"D4 Dispersion")
 ! ----------------------------------------
 !  D4 dispersion energy + gradient (2B) under pbc
 ! ----------------------------------------
    call getENCharges(env, mol, cn, dcndr, dcndL, qeeq, dqdr, dqdL)
-   call env%check(exitRun)
-   if (exitRun) then
-      call env%error("Could not get EN charges for D4 dispersion", source)
-      return
-   end if
+!   call env%check(exitRun)
+!   if (exitRun) then
+!      call env%error("Could not get EN charges for D4 dispersion", source)
+!      return
+!   end if
 
    call getCoordinationNumber(mol, trans, 40.0_wp, cnType%cov, &
       & ccn, dccndr, dccndL)
@@ -366,35 +376,35 @@ subroutine gfn0 &
       & xtbData%dispersion%g_a, xtbData%dispersion%g_c, xtbData%dispersion%wf, &
       & 60.0_wp, ccn, dccndr, dccndL, qeeq, dqdr, dqdL, ed, gradient, sigma)
 
-   call env%check(exitRun)
-   if (exitRun) then
-      call env%error("Evaluation of dispersion energy failed", source)
-      return
-   end if
+!   call env%check(exitRun)
+!   if (exitRun) then
+!      call env%error("Evaluation of dispersion energy failed", source)
+!      return
+!   end if
 
    ! better save than sorry, delete the D4-EEQ charges
    qeeq(:) = 0.0_wp
    dqdr(:, :, :) = 0.0_wp
    dqdL(:, :, :) = 0.0_wp
 
-   if (profile) call timer%measure(4)
+!   if (profile) call timer%measure(4)
 ! ---------------------------------------
 !  Get EEQ charges q(1:n) + dqdr(3,1:n,1:n) under pbc
 ! ---------------------------------------
 
-   if (allocated(gbsa)) then
-      if (profile) call timer%measure(9,"GBSA setup")
-      ! compute Born radii
-      call gbsa%update(env, mol%at, mol%xyz)
-      ! add SASA term to energy and gradient
-      ees = gbsa%gsasa + gbsa%gshift
-      gsolv = gbsa%gsasa
-      gradient = gradient + gbsa%dsdr
-      if (profile) call timer%measure(9)
-   endif
+!   if (allocated(gbsa)) then
+!      if (profile) call timer%measure(9,"GBSA setup")
+!      ! compute Born radii
+!      call gbsa%update(env, mol%at, mol%xyz)
+!      ! add SASA term to energy and gradient
+!      ees = gbsa%gsasa + gbsa%gshift
+!      gsolv = gbsa%gsasa
+!      gradient = gradient + gbsa%dsdr
+!      if (profile) call timer%measure(9)
+!   endif
 
 
-   if (profile) call timer%measure(3,"EEQ model density")
+!   if (profile) call timer%measure(3,"EEQ model density")
    ! names DO NOT corresponds to content of variables, obviously...
    call gfn0_charge_model(chrgeq,mol%n,mol%at,xtbData%coulomb)
    ! initialize electrostatic energy
@@ -412,7 +422,7 @@ subroutine gfn0 &
                exit
             end if
          end do
-         idnum(ii) = mol%at(jat)
+         idnum(ii) = mol%at(jat)  !> idnum contains only the present atom types
       end do
       allocate(chargeWidth(1, nid))
       do ii = 1, nid
@@ -426,47 +436,47 @@ subroutine gfn0 &
          & ees, gradient, sigma, qat=qeeq, dqdr=dqdr, dqdL=dqdL)
    endif
 
-   call env%check(exitRun)
-   if (exitRun) then
-      call env%error("Electronegativity equilibration failed", source)
-      return
-   end if
+!   call env%check(exitRun)
+!   if (exitRun) then
+!      call env%error("Electronegativity equilibration failed", source)
+!      return
+!   end if
 
    wfn%q = qeeq
 
-   if (profile) call timer%measure(3)
-   if (profile) call timer%measure(5,"Integral evaluation")
+!  if (profile) call timer%measure(3)
+!   if (profile) call timer%measure(5,"Integral evaluation")
 ! ---------------------------------------
 !  Build AO overlap S and H0 integrals under pbc
 ! ---------------------------------------
    call getSelfEnergy(xtbData%hamiltonian, xtbData%nShell, mol%at, cn, wfn%q, &
       & selfEnergy, dSEdcn, dSEdq)
-   if (ccm) then
+!   if (ccm) then
       call ccm_build_SH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
          & mol%n, mol%at, basis, nbf, nao, mol%xyz, mol%lattice, intcut, &
          & s, h0, wsc)
-   else
-      call latp%getLatticePoints(trans, sqrt(800.0_wp))
-      call pbc_build_SH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
-         & mol%n, mol%at, basis, nbf, nao, mol%xyz, trans, intcut, s, h0)
-   endif
+!   else
+!      call latp%getLatticePoints(trans, sqrt(800.0_wp))
+!      call pbc_build_SH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
+!         & mol%n, mol%at, basis, nbf, nao, mol%xyz, trans, intcut, s, h0)
+!   endif
 
-   if (profile) call timer%measure(5)
-   if (profile) call timer%measure(6,"Cholesky factorization")
+!   if (profile) call timer%measure(5)
+!   if (profile) call timer%measure(6,"Cholesky factorization")
 
 ! ---------------------------------------
 !  Check for near linear dependencies via Cholesky decomposition
 ! ---------------------------------------
-   call cholesky(env%unit,pr,nao,S,orthog) ! S is not modified
+   call cholesky(stdout,pr,nao,S,orthog) ! S is not modified
    if(orthog)then
       !if (profile) call timer%measure(7,"Canonical orthogonalization")
       call renorm(nao,S) ! S is renormalized
-      call canorthog(env%unit,nao,S,X,xdim,pr,fail)
+      call canorthog(stdout,nao,S,X,xdim,pr,fail)
       !if (profile) call timer%measure(7)
    endif
 
-   if (profile) call timer%measure(6)
-   if (profile) call timer%measure(7,"Zeroth order Hamiltonian")
+!   if (profile) call timer%measure(6)
+!   if (profile) call timer%measure(7,"Zeroth order Hamiltonian")
 ! ---------------------------------------
 !  Setup H0 under pbc
 ! ---------------------------------------
@@ -490,10 +500,10 @@ subroutine gfn0 &
    ! save eigenvectors
    wfn%C = H
 
-   if (fail) then
-      call env%error("Diagonalization of Hamiltonian failed", source)
-      return
-   end if
+!   if (fail) then
+!      call env%error("Diagonalization of Hamiltonian failed", source)
+!      return
+!   end if
 
 ! ---------------------------------------
 !  Fermi smearing
@@ -517,10 +527,10 @@ subroutine gfn0 &
 ! ---------------------------------------
    eel = sum(wfn%focc*wfn%emo)*evtoau + ga + gb
 
-   if (profile) call timer%measure(7)
-   if (.not.pr.and.profile.and.minpr) &
-      call timer%write_timing(env%unit,7,"Diagonalization")
-   if (profile) call timer%measure(8,"Gradient calculation")
+!   if (profile) call timer%measure(7)
+!   if (.not.pr.and.profile.and.minpr) &
+!      call timer%write_timing(stdout,7,"Diagonalization")
+!   if (profile) call timer%measure(8,"Gradient calculation")
 ! ======================================================================
 !  GRADIENT (100% analytical)
 ! ======================================================================
@@ -540,28 +550,28 @@ subroutine gfn0 &
    tmp = wfn%focc*wfn%emo*evtoau
    ! setup energy weighted density matrix = pew
    call dmat(nao,tmp,wfn%C,pew)
-   if (ccm) then  !> this one is also used for the molecular case
+!   if (ccm) then  !> this one is also used for the molecular case
       call ccm_build_dSH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
          & dSEdcn, dSEdq, mol%n, basis, intcut, nao, nbf, mol%at, mol%xyz, &
          & mol%lattice, wfn%P, Pew, gradient, sigma, dhdcn, dhdq, wsc)
-   else
-      call latp%getLatticePoints(trans, sqrt(800.0_wp))
-      call pbc_build_dSH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
-         & dSEdcn, dSEdq, mol%n, basis, intcut, nao, nbf, mol%at, mol%xyz, &
-         & trans, wfn%P, Pew, gradient, sigma, dhdcn, dhdq)
-   endif
-   if (mol%npbc > 0) then
-      ! setup CN sigma
-      call dgemv('n',9,mol%n,1.0_wp,dcndL,9,dhdcn,1,1.0_wp,sigma,1)
-      ! setup  q sigma
-      call dgemv('n',9,mol%n,1.0_wp,dqdL, 9, dhdq,1,1.0_wp,sigma,1)
-   endif
+!   else
+!      call latp%getLatticePoints(trans, sqrt(800.0_wp))
+!      call pbc_build_dSH0(xtbData%nShell, xtbData%hamiltonian, selfEnergy, &
+!         & dSEdcn, dSEdq, mol%n, basis, intcut, nao, nbf, mol%at, mol%xyz, &
+!         & trans, wfn%P, Pew, gradient, sigma, dhdcn, dhdq)
+!   endif
+!   if (mol%npbc > 0) then
+!      ! setup CN sigma
+!      call dgemv('n',9,mol%n,1.0_wp,dcndL,9,dhdcn,1,1.0_wp,sigma,1)
+!      ! setup  q sigma
+!      call dgemv('n',9,mol%n,1.0_wp,dqdL, 9, dhdq,1,1.0_wp,sigma,1)
+!   endif
    ! setup CN gradient
    call dgemv('n',3*mol%n,mol%n, 1.0_wp,dcndr,3*mol%n,dhdcn,1,1.0_wp,gradient,1)
    ! setup  q gradient
    call dgemv('n',3*mol%n,mol%n, 1.0_wp,dqdr, 3*mol%n, dhdq,1,1.0_wp,gradient,1)
 
-   if (profile) call timer%measure(8)
+!   if (profile) call timer%measure(8)
 
 !  calculate the norm for printout
    res%gnorm = sqrt(sum( gradient**2 ))
@@ -574,12 +584,12 @@ subroutine gfn0 &
       !call preig(6,wfn%focc,1.0_wp,wfn%emo, &
       !     max(wfn%ihomoa-12,1),min(wfn%ihomoa+11,nao))
       if(.not.orthog)then
-        call print_orbital_eigenvalues(env%unit,wfn,5)
+        call print_orbital_eigenvalues(stdout,wfn,5)
         if ((wfn%ihomo+1.le.nao).and.(wfn%ihomo.ge.1)) &
            egap = wfn%emo(wfn%ihomo+1)-wfn%emo(wfn%ihomo)
       else
         wfn%nao = xdim
-        call print_orbital_eigenvalues(env%unit,wfn,5)
+        call print_orbital_eigenvalues(stdout,wfn,5)
         if ((wfn%ihomo+1.le.xdim).and.(wfn%ihomo.ge.1)) &
            egap = wfn%emo(wfn%ihomo+1)-wfn%emo(wfn%ihomo)
         wfn%nao = nao
@@ -610,22 +620,22 @@ subroutine gfn0 &
    res%g_hb    = ehb
    res%e_total = etot
    res%hl_gap  = egap
-   if (allocated(gbsa)) then
-      res%g_solv  = gsolv
-      !res%g_born  = gborn    ! not returned
-      res%g_sasa  = gbsa%gsasa
-      !res%g_hb    = gbsa%ghb ! not returned
-      res%g_shift = gbsa%gshift
-   endif
-   ! do NOT calculate the dipole moment from the density, because it's really bad
+!   if (allocated(gbsa)) then
+!      res%g_solv  = gsolv
+!      !res%g_born  = gborn    ! not returned
+!      res%g_sasa  = gbsa%gsasa
+!      !res%g_hb    = gbsa%ghb ! not returned
+!      res%g_shift = gbsa%gshift
+!   endif
+   !> do NOT calculate the dipole moment from the density, because it's really bad
    res%dipole  = matmul(mol%xyz,wfn%q)
    res%g_solv  = 0.0_wp
 
-   if (profile.and.pr) call timer%write(env%unit,'EHT')
+!   if (profile.and.pr) call timer%write(stdout,'EHT')
 
 end associate
 
-   if (profile) call timer%deallocate
+!   if (profile) call timer%deallocate
 
 end subroutine gfn0
 
@@ -769,7 +779,7 @@ subroutine dsrb_grad(mol,srb,cn,dcndr,dcndL,trans,esrb,gradient,sigma)
       enddo ! rep
    enddo ! i
 
-   call contract(drab0dr, dEdr0, gradient, beta=1.0_wp)
+   call contract(drab0dr, dEdr0, gradient, beta=1.0_wp)  !> contract312
    call contract(drab0dL, dEdr0, sigma, beta=1.0_wp)
 
 end subroutine dsrb_grad

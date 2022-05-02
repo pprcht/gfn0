@@ -6,10 +6,15 @@ OBJDIR = build
  #MKLROOT=/opt/intel/mkl
 #--------------------------------------------------------------------------
 
-SRC1 += gfn0_types.o
-SRC1 += gfn0_param.o
+SRC1 += math_wrapper.o
+SRC1 += slater_module.o
+SRC1 += eeq_module.o
 
-OBJS := $(SRC1)
+SRC2 += gfn0_types.o
+SRC2 += gfn0_param.o
+SRC2 += gfn0_basis.o
+
+OBJS := $(SRC1) $(SRC2)
 #--------------------------------------------------------------------------
 
 SUBDIRS += .
@@ -102,7 +107,7 @@ $(OBJDIR)/%.o: %.c
 
 # linken
 $(PROG): $(OBJS)
-	$(LINKER) $(OBJS) $(LIBS) -o $(PROG)
+#	$(LINKER) $(OBJS) $(LIBS) -o $(PROG)
 
 $(OBJDIR):
 	mkdir -p $@

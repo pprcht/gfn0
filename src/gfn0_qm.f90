@@ -520,28 +520,36 @@ contains
 !! ========================================================================
   subroutine solve(ndim,H,S,X,P,e,fail)
     use math_wrapper,only:lapack_sygvd
+    !> INPUT
     integer,intent(in)   :: ndim
-    real(wp),intent(inout):: H(ndim,ndim)
+    real(wp),intent(in)  :: H(ndim*(ndim+1)/2)
     real(wp),intent(in)   :: S(ndim,ndim)
+    !> OUTPUT
     real(wp),intent(out)  :: X(ndim,ndim)
     real(wp),intent(out)  :: P(ndim,ndim)
     real(wp),intent(out)  :: e(ndim)
     logical,intent(out)  :: fail
+    !> LOCAL
+    integer :: i,j,k,info
 
-    integer i,j,info,lwork,liwork,nfound,iu,nbf
-    integer,allocatable :: iwork(:)
-    real(wp),allocatable :: aux(:)
-    real(wp) w0,w1,t0,t1
-
+    !>--- SETUP
     fail = .false.
-!>--- DIAG IN NON-ORTHORGONAL BASIS
+   
+    do i = 1,ndim
+      do j = 1, i
+         k = j+i*(i-1)/2
+         X(j,i) = H(k)
+         X(i,j) = X(j,i)
+      enddo
+    enddo
     P = S
-    call lapack_sygvd(1,'v','u',ndim,H,ndim,P,ndim,e,info)
+    !>--- DIAG IN NON-ORTHORGONAL BASIS
+    call lapack_sygvd(1,'v','u',ndim,X,ndim,P,ndim,e,info)
     if (info .ne. 0) then
       fail = .true.
       return
     end if
-    X = H ! save
+
     return
   end subroutine solve
 

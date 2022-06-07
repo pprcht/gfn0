@@ -34,5 +34,30 @@ module testmol
    public :: testnat
    public :: testat
    public :: testxyz
+   public :: writetestcoord
+
+   
+   character(len=2),parameter :: testelem(8) = ['h ','he','li','be', &
+       &                        'b ','c ','n ','o ']   
+   private :: testelem
+
+contains
+
+subroutine writetestcoord
+
+    integer :: ich,i
+
+    open(newunit=ich,file='coord')
+    write(ich,'(a)') '$coord'
+    do i=1,testnat
+      write(ich,'(3f20.14,2x,a2)') testxyz(1:3,i),testelem(testat(i))
+    enddo
+    write(ich,'(a)') '$end'
+    close(ich)
+
+end subroutine writetestcoord
+
+
+
 
 end module testmol

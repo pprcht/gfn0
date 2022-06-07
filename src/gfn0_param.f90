@@ -20,6 +20,8 @@ module gfn0_parameter
       module procedure :: initGFN0Repulsion
       module procedure :: initGFN0Coulomb
       module procedure :: initGFN0Hamiltonian
+      module procedure :: initGFN0Dispersion
+      module procedure :: initGFN0SRB
    end interface initGFN0
 
 !========================================================================================!
@@ -28,16 +30,24 @@ module gfn0_parameter
    real(wp),private,parameter :: aatoau = 1.0_wp/autoaa
 
 !========================================================================================!
-   real(wp), parameter :: enshell(4) = [0.6_wp, -0.1_wp, -0.2_wp, -0.2_wp]
-   real(wp), parameter :: kshell(4) = [2.0000000_wp, 2.4868000_wp, 2.2700000_wp, 0.6000000_wp]
+   real(wp), parameter :: enshell(0:3) = [0.6_wp, -0.1_wp, -0.2_wp, 0.0_wp]
+   real(wp), parameter :: kshell(0:3) = [2.0000000_wp, 2.4868000_wp, 2.2700000_wp, 0.0000000_wp]
 
    type(TxTBParameter), parameter :: gfn0Globals = TxTBParameter( &
       kshell   = kshell, &
+      ksp      = 2.0000000_wp, &
+      ksd      = 2.4868000_wp, &
+      kpd      = 2.2700000_wp, &
+      kdiff    = 1.1241000_wp, &
       kdiffa   = 0.0000000_wp, &
       kdiffb   =-0.1000000_wp, &
       enshell  = enshell, &
       enscale4 = 4.0000000_wp, &
       ipeashift= 1.7806900_wp, &
+      srbshift = 0.0537000_wp, &
+      srbpre   =-0.0129000_wp, &
+      srbexp   = 3.4847000_wp, &
+      srbken   = 0.5097000_wp, &
       zcnf     = 0.0537000_wp, &
       tscal    =-0.0129000_wp, &
       kcn      = 3.4847000_wp, &
@@ -49,9 +59,9 @@ module gfn0_parameter
       zqf      = 0.0000000_wp, &
       alphaj   = 1.1241000_wp, &
       kexpo    =-0.2000000_wp, &
-      dispa    = 0.8000000_wp, &
-      dispb    = 4.6000000_wp, &
-      dispc    = 2.8500000_wp, &
+      dispa    = 0.8000000_wp, &  !a1
+      dispb    = 4.6000000_wp, &  !a2
+      dispc    = 2.8500000_wp, &  !s8
       dispatm  = 0.0000000_wp, &
       renscale =-0.0900000_wp)
 
@@ -62,11 +72,7 @@ module gfn0_parameter
    ! REPULSION DATA
    !>
    real(wp), parameter :: kExp = 1.5_wp
-
-   !>
    real(wp), parameter :: kExpLight = kExp
-
-   !>
    real(wp), parameter :: rExp = 1.0_wp
 
    !>
@@ -617,92 +623,92 @@ module gfn0_parameter
       & shape(slaterExponent))
 
    real(wp), parameter :: kQShell(0:2, 1:maxElem) = reshape([&
-      & 0.2591008_wp, 0.0000000_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.0526662_wp,-1.7836600_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.9636068_wp, 0.1933068_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.8310555_wp, 0.8910197_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 3.1865592_wp, 0.9002623_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.1683176_wp, 0.2988821_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 1.6770083_wp,-0.2856884_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.5947188_wp, 0.0916715_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.8966240_wp, 0.2645049_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.1394174_wp, 0.1181016_wp,-0.1235510_wp, 0.0000000_wp, &
-      & 1.4578927_wp,-2.1216651_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-1.1457069_wp, 0.6192238_wp,-1.7052287_wp, 0.0000000_wp, &
-      & 1.1373983_wp,-0.5030043_wp,-0.2180697_wp, 0.0000000_wp, &
-      &-1.6833805_wp, 0.7676860_wp,-0.3164855_wp, 0.0000000_wp, &
-      & 0.0638088_wp,-0.0488732_wp, 0.1144146_wp, 0.0000000_wp, &
-      &-0.3628979_wp,-0.1162502_wp, 0.5229391_wp, 0.0000000_wp, &
-      &-0.1771804_wp, 0.3541391_wp, 0.1082906_wp, 0.0000000_wp, &
-      & 0.0581999_wp, 0.1172583_wp, 0.2579057_wp, 0.0000000_wp, &
-      & 1.4171788_wp, 0.6090963_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-1.3567908_wp, 0.7982482_wp,-2.4352495_wp, 0.0000000_wp, &
-      &-1.2515726_wp,-0.2288979_wp,-0.1126341_wp, 0.0000000_wp, &
-      &-2.6329946_wp,-0.5589503_wp,-0.6584541_wp, 0.0000000_wp, &
-      &-2.8582869_wp,-0.9497022_wp,-0.1743943_wp, 0.0000000_wp, &
-      &-0.6557652_wp,-1.1133287_wp, 0.5864026_wp, 0.0000000_wp, &
-      &-2.1012472_wp, 0.0931727_wp,-0.2296589_wp, 0.0000000_wp, &
-      &-2.1531278_wp,-1.3014729_wp,-0.2054193_wp, 0.0000000_wp, &
-      &-1.6422305_wp,-0.2413613_wp, 0.1032325_wp, 0.0000000_wp, &
-      & 0.0892590_wp, 0.6269495_wp,-0.0372394_wp, 0.0000000_wp, &
-      & 0.0790442_wp, 0.0667641_wp,-0.2727800_wp, 0.0000000_wp, &
-      & 0.5947695_wp,-0.3462432_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.8467361_wp,-0.2584210_wp,-0.5108585_wp, 0.0000000_wp, &
-      & 0.2348166_wp,-0.2410370_wp,-0.2772269_wp, 0.0000000_wp, &
-      & 1.1862714_wp, 1.3281349_wp, 0.6150681_wp, 0.0000000_wp, &
-      & 0.1524644_wp, 0.6961378_wp,-1.0725308_wp, 0.0000000_wp, &
-      &-0.0337658_wp, 0.3715817_wp,-0.6430662_wp, 0.0000000_wp, &
-      &-0.0658049_wp, 0.0634599_wp, 1.3725483_wp, 0.0000000_wp, &
-      &-2.1110486_wp,-1.3455843_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-0.7184537_wp, 0.0777799_wp,-0.8135551_wp, 0.0000000_wp, &
-      & 1.1237295_wp,-0.9370621_wp, 0.1974924_wp, 0.0000000_wp, &
-      &-3.1290732_wp,-0.6950275_wp, 0.2953364_wp, 0.0000000_wp, &
-      &-1.5564962_wp,-0.4070963_wp,-0.0034815_wp, 0.0000000_wp, &
-      &-0.5021863_wp,-2.0445824_wp, 0.4028728_wp, 0.0000000_wp, &
-      &-3.2915311_wp,-1.3215133_wp,-0.0229317_wp, 0.0000000_wp, &
-      &-1.9247370_wp,-3.0950796_wp, 0.0242021_wp, 0.0000000_wp, &
-      &-1.6523781_wp,-0.2966759_wp,-0.2394570_wp, 0.0000000_wp, &
-      &-2.2410456_wp,-1.0409758_wp,-0.5186905_wp, 0.0000000_wp, &
-      &-2.6933989_wp, 1.6377067_wp, 0.4579394_wp, 0.0000000_wp, &
-      & 0.6273704_wp,-0.1339630_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.6476509_wp,-0.3983757_wp,-0.5489296_wp, 0.0000000_wp, &
-      & 0.3428358_wp,-0.0107237_wp,-0.0368582_wp, 0.0000000_wp, &
-      & 0.2761934_wp, 0.3213207_wp, 0.8605258_wp, 0.0000000_wp, &
-      &-0.6640266_wp, 0.6301827_wp,-1.2044909_wp, 0.0000000_wp, &
-      & 0.1264617_wp, 0.1662148_wp, 0.0032647_wp, 0.0000000_wp, &
-      &-0.1330582_wp, 0.0494917_wp, 2.8529059_wp, 0.0000000_wp, &
-      &-0.9632540_wp,-0.3851189_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-0.9508608_wp,-0.3461083_wp,-1.0044558_wp, 0.0000000_wp, &
-      & 0.8353349_wp,-0.6965739_wp, 0.1247060_wp, 0.0000000_wp, &
-      & 0.2963503_wp,-0.5819361_wp, 0.2692711_wp, 0.0000000_wp, &
-      & 0.3049667_wp,-0.5242933_wp, 0.2546408_wp, 0.0000000_wp, &
-      & 0.3135831_wp,-0.4666506_wp, 0.2400105_wp, 0.0000000_wp, &
-      & 0.3221996_wp,-0.4090079_wp, 0.2253803_wp, 0.0000000_wp, &
-      & 0.3308160_wp,-0.3513652_wp, 0.2107500_wp, 0.0000000_wp, &
-      & 0.3394324_wp,-0.2937224_wp, 0.1961197_wp, 0.0000000_wp, &
-      & 0.3480488_wp,-0.2360797_wp, 0.1814894_wp, 0.0000000_wp, &
-      & 0.3566653_wp,-0.1784370_wp, 0.1668591_wp, 0.0000000_wp, &
-      & 0.3652817_wp,-0.1207942_wp, 0.1522288_wp, 0.0000000_wp, &
-      & 0.3738981_wp,-0.0631515_wp, 0.1375985_wp, 0.0000000_wp, &
-      & 0.3825146_wp,-0.0055088_wp, 0.1229683_wp, 0.0000000_wp, &
-      & 0.3911310_wp, 0.0521340_wp, 0.1083380_wp, 0.0000000_wp, &
-      & 0.3997474_wp, 0.1097767_wp, 0.0937077_wp, 0.0000000_wp, &
-      & 0.4083638_wp, 0.1674194_wp, 0.0790774_wp, 0.0000000_wp, &
-      & 0.2914598_wp, 0.2000813_wp, 0.1081073_wp, 0.0000000_wp, &
-      &-1.8120352_wp, 1.5015902_wp,-0.0324750_wp, 0.0000000_wp, &
-      &-1.5162303_wp,-0.5627344_wp,-0.0063703_wp, 0.0000000_wp, &
-      &-0.9565221_wp,-0.4840866_wp,-0.7237461_wp, 0.0000000_wp, &
-      &-1.7054596_wp,-0.5268454_wp,-0.2408914_wp, 0.0000000_wp, &
-      &-1.8847069_wp,-0.4888169_wp,-0.1606430_wp, 0.0000000_wp, &
-      &-1.7277302_wp,-1.6224161_wp,-0.4690687_wp, 0.0000000_wp, &
-      &-3.8714610_wp, 1.0468549_wp, 0.5645830_wp, 0.0000000_wp, &
-      & 1.2916136_wp,-0.3520016_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 2.7768835_wp,-1.1939420_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-0.1764125_wp, 0.6143160_wp, 0.0000000_wp, 0.0000000_wp, &
-      & 0.1602211_wp, 0.4235069_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-0.1211837_wp, 0.6131814_wp, 0.0000000_wp, 0.0000000_wp, &
-      &-0.7035045_wp, 0.1660577_wp, 0.6738787_wp, 0.0000000_wp, &
-      & 0.2212935_wp, 0.0793110_wp, 1.3169147_wp, 0.0000000_wp],&
+      & 0.2591008_wp, 0.0000000_wp, 0.0000000_wp,  &
+      & 0.0526662_wp,-1.7836600_wp, 0.0000000_wp,  &
+      & 0.9636068_wp, 0.1933068_wp, 0.0000000_wp,  &
+      & 0.8310555_wp, 0.8910197_wp, 0.0000000_wp,  &
+      & 3.1865592_wp, 0.9002623_wp, 0.0000000_wp,  &
+      & 0.1683176_wp, 0.2988821_wp, 0.0000000_wp,  &
+      & 1.6770083_wp,-0.2856884_wp, 0.0000000_wp,  &
+      & 0.5947188_wp, 0.0916715_wp, 0.0000000_wp,  &
+      & 0.8966240_wp, 0.2645049_wp, 0.0000000_wp,  &
+      & 0.1394174_wp, 0.1181016_wp,-0.1235510_wp,  &
+      & 1.4578927_wp,-2.1216651_wp, 0.0000000_wp,  &
+      &-1.1457069_wp, 0.6192238_wp,-1.7052287_wp,  &
+      & 1.1373983_wp,-0.5030043_wp,-0.2180697_wp,  &
+      &-1.6833805_wp, 0.7676860_wp,-0.3164855_wp,  &
+      & 0.0638088_wp,-0.0488732_wp, 0.1144146_wp,  &
+      &-0.3628979_wp,-0.1162502_wp, 0.5229391_wp,  &
+      &-0.1771804_wp, 0.3541391_wp, 0.1082906_wp,  &
+      & 0.0581999_wp, 0.1172583_wp, 0.2579057_wp,  &
+      & 1.4171788_wp, 0.6090963_wp, 0.0000000_wp,  &
+      &-1.3567908_wp, 0.7982482_wp,-2.4352495_wp,  &
+      &-1.2515726_wp,-0.2288979_wp,-0.1126341_wp,  &
+      &-2.6329946_wp,-0.5589503_wp,-0.6584541_wp,  &
+      &-2.8582869_wp,-0.9497022_wp,-0.1743943_wp,  &
+      &-0.6557652_wp,-1.1133287_wp, 0.5864026_wp,  &
+      &-2.1012472_wp, 0.0931727_wp,-0.2296589_wp,  &
+      &-2.1531278_wp,-1.3014729_wp,-0.2054193_wp,  &
+      &-1.6422305_wp,-0.2413613_wp, 0.1032325_wp,  &
+      & 0.0892590_wp, 0.6269495_wp,-0.0372394_wp,  &
+      & 0.0790442_wp, 0.0667641_wp,-0.2727800_wp,  &
+      & 0.5947695_wp,-0.3462432_wp, 0.0000000_wp,  &
+      & 0.8467361_wp,-0.2584210_wp,-0.5108585_wp,  &
+      & 0.2348166_wp,-0.2410370_wp,-0.2772269_wp,  &
+      & 1.1862714_wp, 1.3281349_wp, 0.6150681_wp,  &
+      & 0.1524644_wp, 0.6961378_wp,-1.0725308_wp,  &
+      &-0.0337658_wp, 0.3715817_wp,-0.6430662_wp,  &
+      &-0.0658049_wp, 0.0634599_wp, 1.3725483_wp,  &
+      &-2.1110486_wp,-1.3455843_wp, 0.0000000_wp,  &
+      &-0.7184537_wp, 0.0777799_wp,-0.8135551_wp,  &
+      & 1.1237295_wp,-0.9370621_wp, 0.1974924_wp,  &
+      &-3.1290732_wp,-0.6950275_wp, 0.2953364_wp,  &
+      &-1.5564962_wp,-0.4070963_wp,-0.0034815_wp,  &
+      &-0.5021863_wp,-2.0445824_wp, 0.4028728_wp,  &
+      &-3.2915311_wp,-1.3215133_wp,-0.0229317_wp,  &
+      &-1.9247370_wp,-3.0950796_wp, 0.0242021_wp,  &
+      &-1.6523781_wp,-0.2966759_wp,-0.2394570_wp,  &
+      &-2.2410456_wp,-1.0409758_wp,-0.5186905_wp,  &
+      &-2.6933989_wp, 1.6377067_wp, 0.4579394_wp,  &
+      & 0.6273704_wp,-0.1339630_wp, 0.0000000_wp,  &
+      & 0.6476509_wp,-0.3983757_wp,-0.5489296_wp,  &
+      & 0.3428358_wp,-0.0107237_wp,-0.0368582_wp,  &
+      & 0.2761934_wp, 0.3213207_wp, 0.8605258_wp,  &
+      &-0.6640266_wp, 0.6301827_wp,-1.2044909_wp,  &
+      & 0.1264617_wp, 0.1662148_wp, 0.0032647_wp,  &
+      &-0.1330582_wp, 0.0494917_wp, 2.8529059_wp,  &
+      &-0.9632540_wp,-0.3851189_wp, 0.0000000_wp,  &
+      &-0.9508608_wp,-0.3461083_wp,-1.0044558_wp,  &
+      & 0.8353349_wp,-0.6965739_wp, 0.1247060_wp,  &
+      & 0.2963503_wp,-0.5819361_wp, 0.2692711_wp,  &
+      & 0.3049667_wp,-0.5242933_wp, 0.2546408_wp,  &
+      & 0.3135831_wp,-0.4666506_wp, 0.2400105_wp,  &
+      & 0.3221996_wp,-0.4090079_wp, 0.2253803_wp,  &
+      & 0.3308160_wp,-0.3513652_wp, 0.2107500_wp,  &
+      & 0.3394324_wp,-0.2937224_wp, 0.1961197_wp,  &
+      & 0.3480488_wp,-0.2360797_wp, 0.1814894_wp,  &
+      & 0.3566653_wp,-0.1784370_wp, 0.1668591_wp,  &
+      & 0.3652817_wp,-0.1207942_wp, 0.1522288_wp,  &
+      & 0.3738981_wp,-0.0631515_wp, 0.1375985_wp,  &
+      & 0.3825146_wp,-0.0055088_wp, 0.1229683_wp,  &
+      & 0.3911310_wp, 0.0521340_wp, 0.1083380_wp,  &
+      & 0.3997474_wp, 0.1097767_wp, 0.0937077_wp,  &
+      & 0.4083638_wp, 0.1674194_wp, 0.0790774_wp,  &
+      & 0.2914598_wp, 0.2000813_wp, 0.1081073_wp,  &
+      &-1.8120352_wp, 1.5015902_wp,-0.0324750_wp,  &
+      &-1.5162303_wp,-0.5627344_wp,-0.0063703_wp,  &
+      &-0.9565221_wp,-0.4840866_wp,-0.7237461_wp,  &
+      &-1.7054596_wp,-0.5268454_wp,-0.2408914_wp,  &
+      &-1.8847069_wp,-0.4888169_wp,-0.1606430_wp,  &
+      &-1.7277302_wp,-1.6224161_wp,-0.4690687_wp,  &
+      &-3.8714610_wp, 1.0468549_wp, 0.5645830_wp,  &
+      & 1.2916136_wp,-0.3520016_wp, 0.0000000_wp,  &
+      & 2.7768835_wp,-1.1939420_wp, 0.0000000_wp,  &
+      &-0.1764125_wp, 0.6143160_wp, 0.0000000_wp,  &
+      & 0.1602211_wp, 0.4235069_wp, 0.0000000_wp,  &
+      &-0.1211837_wp, 0.6131814_wp, 0.0000000_wp,  &
+      &-0.7035045_wp, 0.1660577_wp, 0.6738787_wp,  &
+      & 0.2212935_wp, 0.0793110_wp, 1.3169147_wp],&
       & shape(kQShell))
 
    real(wp), parameter :: kQAtom(1:maxElem) = [&
@@ -824,17 +830,32 @@ subroutine initData(self)
    call initGFN0(self%repulsion)
    call initGFN0(self%coulomb, self%nShell)
    call initGFN0(self%hamiltonian, self%nShell)
-
+   call initGFN0(self%dispersion)
+   call initGFN0(self%srb)
 end subroutine initData
 
 !========================================================================================!
 subroutine initGFN0Repulsion(self)
 
    !> Data instance
-   type(TRepulsionData), intent(out) :: self
+   type(TRepulsionData), intent(inout) :: self
 
-   call initRepulsion(self, kExp, kExpLight, rExp, 0.0_wp, repAlpha, repZeff, &
-      & electronegativity)
+   self%cutoff = 40.0_wp
+   self%kExp = kExp
+   self%kExpLight = kExpLight
+   self%rExp = rExp
+   self%enScale = gfn0Globals%renscale
+
+   allocate(self%alpha(maxElem), source=0.0_wp)
+   allocate(self%zeff(maxElem), source=0.0_wp)
+   allocate(self%electronegativity(maxElem), source=0.0_wp)
+
+   self%alpha = repAlpha(:maxElem)
+   self%zeff = repZeff(:maxElem)
+   self%electronegativity = electronegativity(:maxElem)
+
+   !call initRepulsion(self, kExp, kExpLight, rExp, 0.0_wp, repAlpha, repZeff, &
+   !   & electronegativity)
 
 end subroutine initGFN0Repulsion
 
@@ -959,7 +980,47 @@ subroutine initCoulomb(self, nShell, chemicalHardness, shellHardness, &
 
 end subroutine initCoulomb
 
+!========================================================================================!
 
+subroutine initGFN0SRB(self)
+   type(TShortRangeData),allocatable :: self
+   allocate(self)
+   self%shift = gfn0Globals%srbshift
+   self%prefactor = gfn0Globals%srbpre
+   self%steepness = gfn0Globals%srbexp
+   self%enscale = gfn0Globals%srbken
+end subroutine initGFN0SRB
+
+!========================================================================================!
+subroutine initGFN0Dispersion(self)
+   use gfn0_dftd4, only: newD4Model
+   use dftd4param, only: p_refq_goedecker
+   type(TDispersionData), intent(out) :: self
+   integer :: elem,ref,freq
+   
+   elem = 118
+   ref = 7
+   freq = 23   
+
+   allocate(self%atoms(elem), source=0)
+   allocate(self%nref(elem), source=0)
+   allocate(self%ncount(ref, elem), source=0)
+   allocate(self%cn(ref, elem), source=0.0_wp)
+   allocate(self%q(ref, elem), source=0.0_wp)
+   allocate(self%alpha(freq, ref, elem), source=0.0_wp)
+   allocate(self%c6(ref, ref, elem, elem), source=0.0_wp)
+
+   self%g_a = 3.0_wp
+   self%g_c = 2.0_wp
+   self%wf  = 6.0_wp
+
+   self%a1 = 0.8000000_wp
+   self%a2 = 4.6000000_wp
+   self%s8 = 2.8500000_wp
+
+   call newD4Model(self,self%g_a,self%g_c,p_refq_goedecker)
+
+end subroutine initGFN0Dispersion
 
 !========================================================================================!
 subroutine initGFN0Hamiltonian(self, nShell)
@@ -969,18 +1030,33 @@ subroutine initGFN0Hamiltonian(self, nShell)
 
    !>
    integer, intent(in) :: nShell(:)
-
+   integer :: i
    integer :: mShell, nPrim, lAng
-   integer :: iZp, iSh
+   integer :: iZp, iSh, jsh
    logical :: valShell(0:3)
+
+   self%wExp = 1.0_wp
 
    mShell = maxval(nShell)
    self%angShell = angShell(:mShell, :maxElem)
 
-   self%kScale = 0.5_wp*(spread(gfn0Globals%kShell,1,4)+spread(gfn0Globals%kShell,2,4))
+   do iSh = 0, 3
+      do jSh = 0, 3
+         self%kScale(jSh, iSh) = 0.5_wp * (gfn0globals%kShell(iSh) &
+            & + gfn0globals%kShell(jSh))
+      end do
+   end do
+   !self%kScale = 0.5_wp*(spread(gfn0Globals%kShell,1,4)+spread(gfn0Globals%kShell,2,4))
    self%kDiff = gfn0Globals%kDiff
-   self%enScale = 0.005_wp * (spread(gfn0Globals%enshell, 1, 4) &
-      & + spread(gfn0Globals%enshell, 2, 4))
+
+   do iSh = 0, 3
+      do jSh = 0, 3
+         self%enScale(jSh, iSh) = 0.005_wp * (gfn0globals%enShell(iSh) &
+            & + gfn0globals%enShell(jSh))
+      end do
+   end do
+   !self%enScale = 0.005_wp * (spread(gfn0Globals%enshell, 1, 4) &
+   !   & + spread(gfn0Globals%enshell, 2, 4))
    self%enScale4 = gfn0Globals%enscale4
 
    self%electronegativity = electronegativity(:maxElem)

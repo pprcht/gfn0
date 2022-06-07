@@ -13,6 +13,7 @@ module overlap_module
    implicit none
 
    real(wp),private,parameter :: pi=3.1415926535897932385_wp 
+   real(wp),private,parameter ::  sqrtpi  = sqrt(pi) 
    integer, parameter :: maxl = 6
    integer, parameter :: maxl2 = maxl*2
 
@@ -114,7 +115,6 @@ end function gpcenter
 ! --------------------------------------------------------------[SAW1907]-
 pure subroutine build_kab(ra,alp,rb,bet,gama,kab)
   !$acc routine seq
-   use xtb_mctc_constants
    !     this computes the center, exponent, and multiplying factor of
    !     a single gaussian which can replace the product of two gaussian
    !     centers a and b, and exponents alpha and beta.
@@ -131,7 +131,7 @@ end subroutine build_kab
 
 ! --------------------------------------------------------------[SAW1801]-
 pure subroutine dtrf2(s,li,lj)
-   use xtb_mctc_blas, only : mctc_gemm
+   use math_wrapper
    real(wp),intent(inout) :: s(6,6)
    integer, intent(in)    :: li,lj
    ! CAO-AO transformation
@@ -212,8 +212,8 @@ pure subroutine dtrf2(s,li,lj)
    end select
    !     if not returned up to here -> d-d
    ! CB: transposing s in first dgemm is important for integrals other than S
-   CALL mctc_gemm(trafo, s, dum, transa='T')
-   CALL mctc_gemm(dum, trafo, s2, transb='N')
+   CALL gemm(trafo, s, dum, transa='T')
+   CALL gemm(dum, trafo, s2, transb='N')
    s(1:5,1:5) = s2(2:6,2:6)
    return
 

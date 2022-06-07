@@ -8,11 +8,16 @@ OBJDIR = build
 
 SRC1 += math_wrapper.o
 SRC1 += slater_module.o
+SRC1 += cn_module.o
 SRC1 += eeq_module.o
+SRC1 += dftd4param.o
 
 SRC2 += gfn0_types.o
+SRC2 += gfn0_dftd4.o
 SRC2 += gfn0_param.o
 SRC2 += gfn0_basis.o
+SRC2 += gfn0_srb.o
+SRC2 += gfn0_module.o
 
 OBJS := $(SRC1) $(SRC2)
 #--------------------------------------------------------------------------

@@ -477,7 +477,7 @@ subroutine dim_basis(xtbData,n,at,nshell,nao,nbf)
       enddo
       if(k.eq.0) then
          write(*,*) 'no basis found for atom', i,' Z= ',at(i)
-         call terminate(1)
+         error stop 
       endif
    enddo
 

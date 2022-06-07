@@ -1,21 +1,54 @@
 program gfn0_main
-    use iso_fortran_env, only: wp=>real64
+    use iso_fortran_env, only: wp=>real64,stdout=>output_unit
     use testmol
+    use gfn0_module
+    use gfn0_prints
     implicit none
     
     integer :: nat
     integer,allocatable :: at(:)
     real(wp),allocatable :: xyz(:,:)
+    integer :: chrg
+    integer :: uhf
 
     integer :: i,j,k,l
 
 !========================================================================================!
+   type(TBasisset)    :: basis   !< basis set info
+   type(TxTBData_mod) :: xtbData !< main data/parameter frame 
+   type(Twavefunction) :: wfn    !< wavefunction data
+
+   real(wp) :: energy
+   real(wp),allocatable :: gradient(:,:)
+
+   real(wp),allocatable :: cn(:)
+   real(wp),allocatable :: dcndr(:,:,:)
+
+   real(wp),allocatable :: qat(:)
+   real(wp),allocatable :: dqdr(:,:,:)
+
+   real(wp) :: ies,edisp,erep,esrb,eel,gnorm
+
+   logical :: fail
+!========================================================================================!
+    fail = .false.
 
     nat = testnat
     allocate(at(nat),xyz(3,nat))
     
     at = testat
     xyz = testxyz
+    uhf = 0
+    chrg = 0
+
+    energy = 0.0_wp
+    ies    = 0.0_wp
+    edisp  = 0.0_wp
+    erep   = 0.0_wp
+    esrb   = 0.0_wp
+    eel    = 0.0_wp
+    gnorm  = 0.0_wp
+    allocate(gradient(3,nat),source=0.0_wp)
 
 
     write(*,*) nat
@@ -23,10 +56,80 @@ program gfn0_main
     do i=1,nat
       write(*,'(2x,i3,3x,3f16.6)') at(i),xyz(1:3,i)
     enddo
-   
+    call writetestcoord()
+
+    call initGFN0Params(nat, at, xyz, chrg, uhf, basis, xtbData)
+
+
+    call xtbData%writeinfo(stdout)
+
+!=======================================================================================!
+    write(*,*)
+
+!>--- CN and CN gradient
+    write(*,*) 'Calculating CN'
+    allocate(cn(nat),dcndr(3,nat,nat), source=0.0_wp)
+    call gfn0_getCN(nat,at,xyz,cn,dcndr)
+
+!>--- EEQ charges, gradients and IES energy
+    write(*,*) 'Calculating EEQ charges'
+    allocate(qat(nat),dqdr(3,nat,nat))
+    call gfn0_electrostatics(nat, at, xyz, chrg, xtbData, &
+    & cn, dcndr, ies, gradient, qat, dqdr)
+    write(*,'(3x,a5,1x,f16.8)') 'IES',ies
+ 
+    write(*,*)
+    write(*,'(a5,a8,a8)') 'at','CN','q'
+    do i=1,nat
+    write(*,'(i5,f8.3,f8.3)') at(i), cn(i), qat(i)
+    enddo
+
+!>--- D4 two-body dispersion energy
+    write(*,*) 
+    write(*,*) 'Calculating Dispersion'
+    call gfn0_dispersion(nat, at, xyz, chrg, xtbData, &
+    &  cn, dcndr, edisp, gradient)
+    write(*,'(3x,a5,1x,f16.8)') 'Edisp',edisp
+
+!>--- Repulsion energy
+    write(*,*)
+    write(*,*) 'Calculating Repulsion'
+    call gfn0_repulsion(nat, at, xyz, xtbData%repulsion, erep, gradient)
+    write(*,'(3x,a5,1x,f16.8)') 'Erep',erep
+
+!>--- SRB energy
+    write(*,*)
+    write(*,*) 'Calculating SRB correction'
+    call gfn0_shortranged(nat, at, xyz, xtbData%srb, cn, dcndr, &
+    &                     esrb, gradient)
+    write(*,'(3x,a5,1x,f16.8)') 'Esrb',esrb
+
+!>--- QM part
+    write(*,*)
+    write(*,*) 'Calculating EHT energy'
+    call wfnsetup(xtbData, basis, nat, at, uhf, chrg, wfn)
+    call pr_wfn_param(xtbdata,basis,wfn)
+    call gfn0_eht(nat, at, xyz, xtbData, basis, cn, dcndr, qat, dqdr, &
+   &                wfn, eel, gradient, fail)
+    write(*,'(3x,a5,1x,f16.8)') 'Eel',eel
+
+!>--- Summaryund total energy
+
+   energy = ies+edisp+erep+esrb+eel
+   gnorm  = sqrt(sum( gradient**2 ))
+   write(*,*)
+   write(*,*) "Summary"
+   write(*,'(3x,a5,1x,f16.8)') 'IES',ies
+   write(*,'(3x,a5,1x,f16.8)') 'Edisp',edisp
+   write(*,'(3x,a5,1x,f16.8)') 'Erep',erep
+   write(*,'(3x,a5,1x,f16.8)') 'Esrb',esrb
+   write(*,'(3x,a5,1x,f16.8)') 'Eel',eel
+   write(*,*)'--------------------------'
+   write(*,'(3x,a5,1x,f16.8)') 'Etot',energy
+   write(*,'(3x,a5,1x,f16.8)') 'gnorm',gnorm
+
+
 
     deallocate(xyz,at)
-
-
 !=======================================================================================!
 end program gfn0_main

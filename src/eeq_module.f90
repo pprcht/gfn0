@@ -7,65 +7,24 @@
 
 !> Implementation of the electronegativity equilibration model
 module eeq_module
-   !use xtb_mctc_blas, only : mctc_dot, mctc_symv
-   !use xtb_mctc_lapack, only : lapack_sytrf, lapack_sytri
-   !use xtb_mctc_la, only : contract
    use iso_fortran_env, only: wp=>real64
    use math_wrapper
    implicit none
    private
 
    public :: chargeEquilibration
-   !public :: TENEquilibration, init
 
    real(wp),private,parameter :: pi=3.1415926535897932385_wp
    real(wp),private,parameter :: sqrtpi  = sqrt(pi)
 
-
-   !!> Electronegativity equilibration model
-   !type :: TENEquilibration
-
-   !   !> Electronegativity of each species
-   !   real(wp), allocatable :: chi(:, :)
-
-   !   !> Coordination number dependence of each species
-   !   real(wp), allocatable :: kcn(:, :)
-
-   !   !> Chemical hardness of each species
-   !   real(wp), allocatable :: gam(:, :)
-
-   !   !!> Solver for the linear system
-   !   !procedure(solve), nopass, pointer :: solve_lineq => null()
-
-   !   !!> Inversion of the linear system (for response)
-   !   !procedure(solve), nopass, pointer :: invert_lineq => null()
-
-   !contains
-
-   !   !> Evaluate charge equilibration model
-   !   procedure :: chargeEquilibration
-
-   !end type TENEquilibration
-
-
 contains
-
-
+!========================================================================================!
 subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
       & chi, kcn, gam, rad,&
       & energy, gradient, qat, dqdr)
 
    !> Source for error generation
    character(len=*), parameter :: source = 'eeq_chargeEquilibration'
-
-   !!> Instance of the equilibration model
-   !class(TENEquilibration), intent(inout) :: self
-   !!> Calculation environment
-   !type(TEnvironment), intent(inout) :: env
-   !!> Molecular structure data
-   !type(TMolecule), intent(in) :: mol
-   !!> Instance of the Coulomb evaluator
-   !class(TCoulomb), intent(inout) :: coulomb
 
    !> Number of atoms
    integer, intent(in) :: nat
@@ -102,7 +61,6 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
    real(wp), allocatable :: djdr(:, :, :), djdtr(:, :)
    real(wp), allocatable :: xvec(:), qvec(:), dxdcn(:), shift(:)
    real(wp), allocatable :: dxdr(:, :, :)
-
    logical :: deriv, response, exitRun
    integer :: nsh, ndim
    integer :: iat, ish, ii, iid
@@ -118,21 +76,8 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
    allocate(qvec(ndim))
    allocate(dxdcn(nsh))
 
-   !call getCoulombMatrix(nat, xyz, jmat)
    call getCoulombMatrixSmeared(nat, at, xyz, rad, jmat)
 
-   !do iat = 1, mol%n
-   !   ii = coulomb%itbl(1, iat)
-   !   iid = mol%id(iat)
-   !   do ish = 1, coulomb%itbl(2, iat)
-   !      tmp = self%kcn(ish, iid) / (sqrt(cn(iat)) + 1.0e-14_wp)
-   !      xvec(ii+ish) = -self%chi(ish, iid) + tmp*cn(iat)
-   !      dxdcn(ii+ish) = 0.5_wp*tmp
-   !      jmat(ii+ish, ii+ish) = jmat(ii+ish, ii+ish) + self%gam(ish, iid)
-   !      jmat(ii+ish, ndim) = 1.0_wp
-   !      jmat(ndim, ii+ish) = 1.0_wp
-   !   end do
-   !end do
    do iat = 1, nat
       iid = at(iat) !> atom type
       tmp = kcn(iid) / (sqrt(cn(iat)) + 1.0e-14_wp)
@@ -147,27 +92,13 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
 
    inv = jmat
    if (response) then
-      !call self%invert_lineq(env, inv, xvec, qvec)
       call solve_sytri(inv, xvec, qvec)
    else
-      !call self%solve_lineq(env, inv, xvec, qvec)
       call solve_sysv(inv, xvec, qvec)
    end if
 
-   !call env%check(exitRun)
-   !if (exitRun) then
-   !   call env%error("Solving linear equations failed", source)
-   !   return
-   !end if
-
    if (present(qat)) then
       qat(:) = 0.0_wp
-      !do iat = 1, mol%n
-      !   ii = coulomb%itbl(1, iat)
-      !   do ish = 1, coulomb%itbl(2, iat)
-      !      qat(iat) = qat(iat) + qvec(ii+ish)
-      !   end do
-      !end do
       do iat = 1, nat
         qat(iat) = qat(iat) + qvec(iat)
       end do
@@ -175,15 +106,14 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
 
    if (present(energy)) then
       shift = xvec
-      call mctc_symv(jmat, qvec, shift, alpha=0.5_wp, beta=-1.0_wp)
-      energy = energy + mctc_dot(qvec, shift)
+      call symv(jmat, qvec, shift, alpha=0.5_wp, beta=-1.0_wp)
+      energy = energy + dot(qvec, shift)
    end if
 
    if (deriv .or. response) then
       allocate(djdr(3, nat, ndim))
       allocate(djdtr(3, ndim))
       allocate(dxdr(3, nat, ndim))
-      !call getCoulombDerivs(nat, xyz, qvec, djdr, djdtr)
       call getCoulombDerivsSmeared(nat, at, xyz, rad, qvec, djdr, djdtr)
       do iat = 1, nat
         dxdr(:, :, iat) = -dxdcn(iat)*dcndr(:, :, iat)
@@ -252,6 +182,8 @@ subroutine solve_sysv(mat, rhs, vec)
       return
    end if
 
+   deallocate(work)
+   deallocate(ipiv)
 end subroutine solve_sysv
 
 
@@ -260,9 +192,6 @@ subroutine solve_sytri(mat, rhs, vec)
 
    !> Source for error generation
    character(len=*), parameter :: source = 'xtb_eeq_sytri'
-
-   !!> Calculation environment
-   !type(TEnvironment), intent(inout) :: env
 
    real(wp), intent(inout) :: mat(:, :)
 
@@ -281,7 +210,7 @@ subroutine solve_sytri(mat, rhs, vec)
 
    call invert_sytri(mat)
 
-   call mctc_symv(mat, rhs, vec)
+   call symv(mat, rhs, vec)
 
 end subroutine solve_sytri
 
@@ -334,6 +263,8 @@ subroutine invert_sytri(mat)
       enddo
    enddo
 
+   deallocate(work)
+   deallocate(ipiv)
 end subroutine invert_sytri
 
 !========================================================================================!
@@ -385,7 +316,7 @@ subroutine getCoulombMatrixSmeared(nat, at, xyz, rad, jmat)
 
    jmat(:, :) = 0.0_wp
 
-   !$omp parallel do default(none) shared(nat, xyz, rad, jmat) &
+   !$omp parallel do default(none) shared(nat, at, xyz, rad, jmat) &
    !$omp private(iat, jat, iid, jid, r1, rterm, gij)
    do iat = 1, nat
       iid = at(iat)
@@ -441,8 +372,8 @@ subroutine getCoulombDerivs(nat, xyz, qvec, djdr, djdtr)
          dS(:, :) = 0.5_wp * spread(dG, 1, 3) * spread(vec, 2, 3)
          djdr(:, iat, jat) = djdr(:, iat, jat) - dG*qvec(iat)
          djdr(:, jat, iat) = djdr(:, jat, iat) + dG*qvec(jat)
-         djdtr(:, jj+jsh) = djdtr(:, jat) + dG*qvec(iat)
-         djdtr(:, ii+ish) = djdtr(:, iat) - dG*qvec(jat)
+         djdtr(:, jat) = djdtr(:, jat) + dG*qvec(iat)
+         djdtr(:, iat) = djdtr(:, iat) - dG*qvec(jat)
       end do
    end do
    !$omp end parallel do

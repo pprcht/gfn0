@@ -23,6 +23,7 @@ module gfn0_types
 
    public :: TxTBData_mod,TxTBParameter
    public :: TRepulsionData, TCoulombData, THamiltonianData
+   public :: TDispersionData,TShortRangeData
    public :: newData, getData
 
    interface newData
@@ -175,6 +176,58 @@ module gfn0_types
    end type TCoulombData
 
 !========================================================================================!
+   !> Data for the dispersion contribution
+   type :: TDispersionData
+
+      !> Damping parameters
+      real(wp) :: s6  = 1.0_wp
+      real(wp) :: s8  = 0.0_wp
+      real(wp) :: s10 = 0.0_wp
+      real(wp) :: a1  = 0.0_wp
+      real(wp) :: a2  = 0.0_wp
+      real(wp) :: s9  = 0.0_wp
+      integer  :: alp = 16
+
+      !> Weighting factor for Gaussian interpolation
+      real(wp) :: wf
+
+      !> Charge steepness
+      real(wp) :: g_a
+
+      !> Charge height
+      real(wp) :: g_c
+
+      !> Reference data for the dispersion
+      integer, allocatable :: atoms(:)
+      integer, allocatable :: nref(:)
+      integer, allocatable :: ncount(:, :)
+      real(wp), allocatable :: cn(:, :)
+      real(wp), allocatable :: q(:, :)
+      real(wp), allocatable :: alpha(:, :, :)
+      real(wp), allocatable :: c6(:, :, :, :)
+
+   end type TDispersionData
+
+!========================================================================================!
+   !> Short range basis correction
+   type TShortRangeData
+
+      !> Additional offset for the reference bond lengths
+      real(wp) :: shift
+
+      !> Scaling factor for the energy contribution
+      real(wp) :: prefactor
+
+      !> Steepness of the EN dependence
+      real(wp) :: steepness
+
+      !> Scaling factor for electronegativity differences
+      real(wp) :: enScale
+
+   end type TShortRangeData
+
+
+!========================================================================================!
 
    !> Parametrisation data for the xTB method
    type :: TxTBData_mod
@@ -188,6 +241,12 @@ module gfn0_types
       !> Internal version number
       integer :: level
 
+      !> accuaracy selection
+      real(wp) :: acc = 1.0_wp
+
+      !> electronic temperature
+      real(wp) :: etemp = 300.0_wp
+
       !> Number of shells
       integer, allocatable :: nShell(:)
 
@@ -200,8 +259,11 @@ module gfn0_types
       !> Parametrisation data for Coulombic interactions
       type(TCoulombData) :: coulomb
 
-      !> Shift for IP/EA calculations
-      real(wp) :: ipeashift
+      !> Parametrization for Dispersion interactions
+      type(TDispersionData) :: dispersion
+
+      !> Parametrisation data for the short range basis correction (optional)
+      type(TShortRangeData), allocatable :: srb
 
    contains
 
@@ -341,6 +403,12 @@ subroutine writeInfo(self, unit, num)
    write(unit, '(a)')
    write(unit, rfmt) "zeta-weighting", self%hamiltonian%wExp
 
+   write(unit, head) "Dispersion"
+   write(unit, rfmt) "s8", self%dispersion%s8
+   write(unit, rfmt) "a1", self%dispersion%a1
+   write(unit, rfmt) "a2", self%dispersion%a2
+   write(unit, rfmt) "s9", self%dispersion%s9
+
    write(unit, head) "Repulsion"
    write(unit, rfmt, advance='no') "kExp", self%repulsion%kExp
    if (self%repulsion%kExpLight /= self%repulsion%kExp) then
@@ -359,30 +427,38 @@ subroutine writeInfo(self, unit, num)
       write(unit, afmt) "third order", "false"
    end if
 
+   if (allocated(self%srb)) then
+      write(unit, head) "Polar bond correction"
+      write(unit, rfmt) "rad-shift", self%srb%shift
+      write(unit, rfmt) "strength", self%srb%prefactor
+      write(unit, rfmt) "en-exp", self%srb%steepness
+      write(unit, rfmt) "en-scale", self%srb%enScale
+   end if
+
    write(unit, '(a)')
 
 contains
-subroutine generic_header(iunit,string,width,offset)
-implicit none
-integer,intent(in) :: iunit
-integer,intent(in) :: offset
-integer,intent(in) :: width
-character(len=*),intent(in) :: string
-character(len=width) :: dum1,dum2
-character(len=2*width) :: outstring
-character(len=width) :: formatstr
-integer :: strlen,ifront,iback
-strlen = len(string)
-ifront = (width - strlen)/2
-iback  = width - ifront - strlen
-write(dum1,*) width
-write(dum2,*) offset
-write(formatstr,'(i0,"x,a,",i0,"x")') ifront,iback
-write(outstring,'("|",'//formatstr//',"|")') string
-write(iunit,'('//dum2//'x,1x,'//dum1//'("-"),1x)')
-write(iunit,'('//dum2//'x,a)') trim(outstring)
-write(iunit,'('//dum2//'x,1x,'//dum1//'("-"),1x)')
-end subroutine generic_header
+   subroutine generic_header(iunit,string,width,offset)
+   implicit none
+   integer,intent(in) :: iunit
+   integer,intent(in) :: offset
+   integer,intent(in) :: width
+   character(len=*),intent(in) :: string
+   character(len=width) :: dum1,dum2
+   character(len=2*width) :: outstring
+   character(len=width) :: formatstr
+   integer :: strlen,ifront,iback
+   strlen = len(string)
+   ifront = (width - strlen)/2
+   iback  = width - ifront - strlen
+   write(dum1,*) width
+   write(dum2,*) offset
+   write(formatstr,'(i0,"x,a,",i0,"x")') ifront,iback
+   write(outstring,'("|",'//formatstr//',"|")') string
+   write(iunit,'('//dum2//'x,1x,'//dum1//'("-"),1x)')
+   write(iunit,'('//dum2//'x,a)') trim(outstring)
+   write(iunit,'('//dum2//'x,1x,'//dum1//'("-"),1x)')
+   end subroutine generic_header
 end subroutine writeInfo
 
 

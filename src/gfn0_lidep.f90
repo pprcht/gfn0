@@ -1,28 +1,48 @@
-
+!================================================================================!
+! This file is part of gfn0.
+!
+! Copyright (C) 2022 Philipp Pracht
+!
+! gfn0 is free software: you can redistribute it and/or modify it under
+! the terms of the GNU Lesser General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! gfn0 is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU Lesser General Public License for more details.
+!
+! You should have received a copy of the GNU Lesser General Public License
+! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
+!--------------------------------------------------------------------------------!
+!> The original (unmodified) source code can be found under the GNU LGPL 3.0 license
+!> Copyright (C) 2019-2020 Sebastian Ehlert
+!> at https://github.com/grimme-lab/xtb
+!================================================================================!
+module gfn0_lidep
 !----------------------------------------------------------------------------------------------
-! module gfn0_lineardep
-!
-! Contains some routines related to problems that can arise due to
-! linear dependencies in the basis set, i.e., if any of the eigenvalues
-! of the diagonalized overlap matrix approach zero.
-! With these routines we can get cut-off eigenvalues of the overlap that are too small
-! and generate a transformation matrix X. With this matrix X we
-! can then transform our Hamiltionian to H'=X**(T)*H*X, which can then be diagonalized
-! without need for the Overlap.
-!
-! For more information see Chapter 3.4.5 "Orthogonalization of the Basis" in Szabo/Ostlund
-!
-! P.Pracht, May 2019
+!> module gfn0_lineardep
+!>
+!> Contains some routines related to problems that can arise due to
+!> linear dependencies in the basis set, i.e., if any of the eigenvalues
+!> of the diagonalized overlap matrix approach zero.
+!> With these routines we can get cut-off eigenvalues of the overlap that are too small
+!> and generate a transformation matrix X. With this matrix X we
+!> can then transform our Hamiltionian to H'=X**(T)*H*X, which can then be diagonalized
+!> without need for the Overlap.
+!>
+!> For more information see Chapter 3.4.5 "Orthogonalization of the Basis" in Szabo/Ostlund
+!>
+!> P.Pracht, May 2019
 !----------------------------------------------------------------------------------------------
-module gfn0_lineardep
    use iso_fortran_env, only : wp=>real64
-   !use xtb_mctc_lapack, only : lapack_sygvd, lapack_syev
-   !use xtb_setparam, only: set
-   !use xtb_mctc_blas, only : blas_gemm, blas_symm
    implicit none
 
-   !real(wp) :: lidethr    ! cut-off threshold for small overlap eigenvalues
-   logical  :: orthog = .false.       ! global logical if the orthogonal basis should be used
+   !> cut-off threshold for small overlap eigenvalues
+   real(wp) :: lidethr = 0.00001_wp 
+   !> global logical if the orthogonal basis should be used
+   logical  :: orthog = .false.
 
    contains
 !----------------------------------------------------------------------------------------------

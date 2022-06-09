@@ -1,14 +1,30 @@
-
-
-
-!> The original source code can be found under the GNU LGPL 3.0 license
+!================================================================================!
+! This file is part of gfn0.
+!
+! Copyright (C) 2022 Philipp Pracht
+!
+! gfn0 is free software: you can redistribute it and/or modify it under
+! the terms of the GNU Lesser General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! gfn0 is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU Lesser General Public License for more details.
+!
+! You should have received a copy of the GNU Lesser General Public License
+! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
+!--------------------------------------------------------------------------------!
+!> The original (unmodified) source code can be found under the GNU LGPL 3.0 license
+!> Copyright (C) 2019-2020 Sebastian Ehlert
 !> at https://github.com/grimme-lab/xtb
-
+!================================================================================!
+module overlap_module
 ! --------------------------------------------------------------[SAW1907]-
 !> Backend implementation for all overlap distribution based integrals,
 !  we use a hardcoded horizontal Obara--Saika recursion relation to get
 !  the job done, this is working code, so think twice before modifying it!
-module overlap_module
    use iso_fortran_env, only : wp=>real64
    implicit none
 

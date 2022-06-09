@@ -14,7 +14,7 @@
 ! GNU Lesser General Public License for more details.
 !
 ! You should have received a copy of the GNU Lesser General Public License
-! along with crest.  If not, see <https://www.gnu.org/licenses/>.
+! along with gfn0. If not, see <https://www.gnu.org/licenses/>.
 !--------------------------------------------------------------------------------!
 !> The original (unmodified) source code can be found under the GNU LGPL 3.0 license
 !> Copyright (C) 2019-2020 Sebastian Ehlert

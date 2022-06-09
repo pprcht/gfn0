@@ -1,21 +1,25 @@
-! This file is part of xtb.
+!================================================================================!
+! This file is part of gfn0.
 !
-! Copyright (C) 2017-2020 Stefan Grimme
-! Copyright (C) 2020, NVIDIA CORPORATION. All rights reserved.
+! Copyright (C) 2022 Philipp Pracht
 !
-! xtb is free software: you can redistribute it and/or modify it under
+! gfn0 is free software: you can redistribute it and/or modify it under
 ! the terms of the GNU Lesser General Public License as published by
 ! the Free Software Foundation, either version 3 of the License, or
 ! (at your option) any later version.
 !
-! xtb is distributed in the hope that it will be useful,
+! gfn0 is distributed in the hope that it will be useful,
 ! but WITHOUT ANY WARRANTY; without even the implied warranty of
 ! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ! GNU Lesser General Public License for more details.
 !
 ! You should have received a copy of the GNU Lesser General Public License
-! along with xtb.  If not, see <https://www.gnu.org/licenses/>.
-
+! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
+!--------------------------------------------------------------------------------!
+!> The original (unmodified) source code can be found under the GNU LGPL 3.0 license
+!> Copyright (C) 2019-2020 Sebastian Ehlert, Stefan Grimme, Eike Caldeweyher
+!> at https://github.com/grimme-lab/xtb
+!================================================================================!
 module gfn0_dftd4
    use iso_fortran_env, only: wp=>real64,stdout=>output_unit
    use gfn0_types, only: TDispersionData

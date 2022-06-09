@@ -4,8 +4,9 @@ module gfn0_module
   use gfn0_types
   use gfn0_parameter
   use gfn0_basisset
-  use wavefunction_module
+  use wfn_module
   use gfn0_qm
+  use gfn0_prints
   implicit none
   private
 
@@ -13,6 +14,7 @@ module gfn0_module
   public :: TxTBData_mod
   public :: TBasisset
   public :: Twavefunction,wfnsetup
+  public :: pr_wfn_param 
 
   !> from this module
   public :: initGFN0Params
@@ -336,7 +338,7 @@ contains
 !> subroutine gfn0_eht
 !> Set up the H0 hamiltonian and overlap,
 !> and from that get the "QM" part of the energy
-    use wavefunction_module
+    use wfn_module
     use math_wrapper,only:contract
     !> INPUT
     integer,intent(in) :: nat

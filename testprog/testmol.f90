@@ -1,4 +1,5 @@
 module testmol
+!> coffeine
     use iso_fortran_env, only : wp=>real64
 
    integer,parameter :: testnat = 24

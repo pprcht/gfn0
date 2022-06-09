@@ -4,7 +4,7 @@ module gfn0_qm
   use gfn0_types
   use gfn0_parameter
   use gfn0_basisset
-  use wavefunction_module
+  use wfn_module
 
   implicit none
   public :: wfnsetup

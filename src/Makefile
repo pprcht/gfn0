@@ -1,5 +1,5 @@
 PROG = gfn0
-
+MYLIB = libgfn0.a
 OBJDIR = build
 #--------------------------------------------------------------------------
  OSTYPE=LINUXI
@@ -8,15 +8,19 @@ OBJDIR = build
 
 SRC1 += math_wrapper.o
 SRC1 += slater_module.o
+SRC1 += wfn_module.o
 SRC1 += cn_module.o
 SRC1 += eeq_module.o
 SRC1 += dftd4param.o
+SRC1 += overlap_module.o
 
 SRC2 += gfn0_types.o
 SRC2 += gfn0_dftd4.o
+SRC2 += gfn0_srb.o
 SRC2 += gfn0_param.o
 SRC2 += gfn0_basis.o
-SRC2 += gfn0_srb.o
+SRC2 += gfn0_qm.o
+SRC2 += gfn0_prints.o
 SRC2 += gfn0_module.o
 
 OBJS := $(SRC1) $(SRC2)
@@ -26,6 +30,7 @@ SUBDIRS += .
 
 vpath % $(SUBDIRS)
 OBJS := $(addprefix $(OBJDIR)/, $(OBJS))
+MYLIB := $(addprefix $(OBJDIR)/, $(MYLIB))
 #--------------------------------------------------------------------------
 
 ifeq ($(OSTYPE),LINUXI)
@@ -33,14 +38,9 @@ ifeq ($(OSTYPE),LINUXI)
   FC := ifort
   CC := icc
   LINKER = ifort -g -O -static -fopenmp  -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include
-#  LINKER = ifort -static -fopenmp  -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include
-#  LIBS = $(MKLROOT)/lib/intel64/libmkl_blas95_lp64.a $(MKLROOT)/lib/intel64/libmkl_lapack95_lp64.a -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_intel_thread.a -Wl,--end-group -lpthread -lm
   LIBS := -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_intel_thread.a -Wl,--end-group 
   PREFLAG := -E -P
   FFLAGS := -g -O -qopenmp -align array64byte -module $(OBJDIR)
-#  FFLAGS := -g -O0 -qopenmp -align array64byte -module $(OBJDIR)
-#  FLAGS := -g -O
-#  FFLAGS := -O -axAVX -qopenmp -align array64byte 
 #  FFLAGS += -check all -g -debug all -traceback -fpe0
   FFLAGS += -traceback
   CCFLAGS += -D_Float128=__float128
@@ -74,9 +74,11 @@ endif
 .PHONY: all
 .PHONY: setup
 .PHONY: clean
+.PHONY: mklib
 
 all: setup
 all: $(PROG)
+mklib: $(MYLIB)
 setup: $(OBJDIR)
 
 #--------------------------------------------------------------------------
@@ -113,6 +115,9 @@ $(OBJDIR)/%.o: %.c
 # linken
 $(PROG): $(OBJS)
 #	$(LINKER) $(OBJS) $(LIBS) -o $(PROG)
+
+$(MYLIB): $(OBJS)
+	ar rc $(MYLIB) $(OBJS)
 
 $(OBJDIR):
 	mkdir -p $@

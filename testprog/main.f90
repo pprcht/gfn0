@@ -2,7 +2,6 @@ program gfn0_main
     use iso_fortran_env, only: wp=>real64,stdout=>output_unit
     use testmol
     use gfn0_module
-    use gfn0_prints
     implicit none
     
     integer :: nat
@@ -129,7 +128,8 @@ program gfn0_main
    write(*,'(3x,a5,1x,f16.8)') 'gnorm',gnorm
 
 
-
-    deallocate(xyz,at)
+   deallocate(dqdr,qat,dcndr,cn)
+   deallocate(gradient)
+   deallocate(xyz,at)
 !=======================================================================================!
 end program gfn0_main

@@ -1,5 +1,6 @@
 *.o
 *.mod
+*.a
 *.tgz
 github_bin/
 build_majestix

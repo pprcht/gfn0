@@ -2,7 +2,8 @@
 !> The original source code can be found under the GNU LGPL 3.0 license
 !> at https://github.com/grimme-lab/xtb
 
-module wavefunction_module
+module wfn_module
+!> A module that defines the wavefunction type "wfn"
    use iso_fortran_env, only : wp=>real64
    implicit none
 
@@ -74,4 +75,4 @@ subroutine deallocate_wavefunction(self)
    if(allocated(self%C))    deallocate(self%C)
 end subroutine deallocate_wavefunction
 
-end module wavefunction_module
+end module wfn_module

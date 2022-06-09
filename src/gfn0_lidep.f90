@@ -1,22 +1,6 @@
-! This file is part of xtb.
-!
-! Copyright (C) 2017-2020 Stefan Grimme
-!
-! xtb is free software: you can redistribute it and/or modify it under
-! the terms of the GNU Lesser General Public License as published by
-! the Free Software Foundation, either version 3 of the License, or
-! (at your option) any later version.
-!
-! xtb is distributed in the hope that it will be useful,
-! but WITHOUT ANY WARRANTY; without even the implied warranty of
-! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-! GNU Lesser General Public License for more details.
-!
-! You should have received a copy of the GNU Lesser General Public License
-! along with xtb.  If not, see <https://www.gnu.org/licenses/>.
 
 !----------------------------------------------------------------------------------------------
-! module xtb_lineardep
+! module gfn0_lineardep
 !
 ! Contains some routines related to problems that can arise due to
 ! linear dependencies in the basis set, i.e., if any of the eigenvalues
@@ -30,11 +14,11 @@
 !
 ! P.Pracht, May 2019
 !----------------------------------------------------------------------------------------------
-module xtb_lineardep
-   use xtb_mctc_accuracy, only : wp
-   use xtb_mctc_lapack, only : lapack_sygvd, lapack_syev
-   use xtb_setparam, only: set
-   use xtb_mctc_blas, only : blas_gemm, blas_symm
+module gfn0_lineardep
+   use iso_fortran_env, only : wp=>real64
+   !use xtb_mctc_lapack, only : lapack_sygvd, lapack_syev
+   !use xtb_setparam, only: set
+   !use xtb_mctc_blas, only : blas_gemm, blas_symm
    implicit none
 
    !real(wp) :: lidethr    ! cut-off threshold for small overlap eigenvalues
@@ -572,4 +556,4 @@ end subroutine orthgsolve2
 
 !----------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------
-end module xtb_lineardep
+end module gfn0_lineardep

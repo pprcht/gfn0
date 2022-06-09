@@ -8,7 +8,7 @@ OBJDIR = testbuild
 
 SRC1 += math_wrapper.o
 SRC1 += slater_module.o
-SRC1 += wavefunction_module.o
+SRC1 += wfn_module.o
 SRC1 += cn_module.o
 SRC1 += eeq_module.o
 SRC1 += dftd4param.o

@@ -89,7 +89,7 @@ setup: $(OBJDIR)
 # implizite Regel zur Erzeugung von *.o aus *.F ausschalten
 %.o: %.F
 fortran.o : $(CUDA)/src/fortran.c
-	gcc $(CCFLAGS) -I$(CUDA)/src/ $(INC) -c  $(CUDA)/src/fortran.c
+	$(CC) $(CCFLAGS) -I$(CUDA)/src/ $(INC) -c  $(CUDA)/src/fortran.c
 
 # aus *.F mache ein *.f
 %.f: %.F

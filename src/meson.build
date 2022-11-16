@@ -13,6 +13,7 @@ srcs += files(
    'gfn0_basis.f90',
    'gfn0_qm.f90',
    'gfn0_prints.f90',
+   'gfn0_occ.f90',
    'gfn0_module.f90',
 )
 

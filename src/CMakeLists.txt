@@ -16,7 +16,9 @@ list(APPEND srcs
   "${dir}/gfn0_basis.f90"
   "${dir}/gfn0_qm.f90"
   "${dir}/gfn0_prints.f90"
+  "${dir}/gfn0_occ.f90"
   "${dir}/gfn0_module.f90"
+  "${dir}/gfn0_api.f90"
 )
 
 set(srcs ${srcs} PARENT_SCOPE)

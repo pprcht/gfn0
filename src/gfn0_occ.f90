@@ -16,19 +16,21 @@
 ! You should have received a copy of the GNU Lesser General Public License
 ! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
 !================================================================================!
-module gfn0_module
-  use iso_fortran_env,only:wp => real64,stdout => output_unit
+module gfn0_occ
+  use iso_fortran_env,only:wp => real64,stdout => output_unit,stderr => error_unit
 
   use gfn0_types
   use gfn0_parameter
   use gfn0_basisset
   use wfn_module
   use gfn0_qm
+  use math_wrapper,only:contract
   implicit none
   private
 
   !> from this module
   public :: gfn0_eht_occ
+  public :: generate_config
 
   !> privat params
   real(wp),private,parameter :: autoev = 27.21138505_wp
@@ -46,21 +48,19 @@ contains
 !> Takes an occupation matrix as input and can calculate
 !> the energy for multiple (nlev) occupations
 !> No Fermi smearing is conducted!
-    use wfn_module
-    use math_wrapper,only:contract
     !> INPUT
+    type(TBasisset),intent(in)   :: basis
+    type(TxTBData_mod),intent(in) :: xtbData
+    type(Twavefunction),intent(inout) :: wfn
     integer,intent(in) :: nat
     integer,intent(in) :: at(nat)
     real(wp),intent(in) :: xyz(3,nat)
-    integer, intent(in)  :: nlev
+    integer,intent(in)  :: nlev
     real(wp),intent(in) :: occ(basis%nao,nlev)
     real(wp),intent(in) :: cn(:)
     real(wp),intent(in) :: dcndr(:,:,:)
     real(wp),intent(in) :: qat(:)
     real(wp),intent(in) :: dqdr(:,:,:)
-    type(TBasisset),intent(in)   :: basis
-    type(TxTBData_mod),intent(in) :: xtbData
-    type(Twavefunction),intent(inout) :: wfn
     !> OUTPUT
     real(wp),intent(out) :: eels(nlev)
     real(wp),intent(inout) :: gradients(3,nat,nlev)
@@ -116,37 +116,36 @@ contains
 !==========! GRADIENT(S) !=========!
     allocate (dHdcn(nat),dHdq(nat),pew(nao,nao),tmp(nao), &
     &      source=0.0_wp)
-    allocate(tmpgrd(3,nat), source= 0.0_wp)
+    allocate (tmpgrd(3,nat),source=0.0_wp)
 
-    do i=1,nlev
-      !>--- setup 
+    do i = 1,nlev
+      !>--- setup
       dHdcn = 0.0_wp
-      dHdq  = 0.0_wp
-      tmp(:) = occ(:,i)    
-      tmpgrd(:,:) = gradients(:,:,i)    
-      
+      dHdq = 0.0_wp
+      tmp(:) = occ(:,i)
+      tmpgrd(:,:) = gradients(:,:,i)
+
       !>--- No Fermi Smearing this time!
       call dmat(nao,tmp,wfn%C,wfn%P)
       eels(i) = sum(tmp * wfn%emo) * evtoau
-  
-      
+
       !> setup energy weighted density matrix = Pew for gradient calculation
-      tmp = wfn%focc * wfn%emo * evtoau
+      tmp = occ(:,i) * wfn%emo * evtoau
       call dmat(nao,tmp,wfn%C,Pew)
       call build_dSH0(xtbData%nShell,xtbData%hamiltonian,selfEnergy, &
           & dSEdcn,dSEdq,nat,basis,intcut,nao,at,xyz, &
           & wfn%P,Pew,tmpgrd,dHdcn,dHdq)
-  
+
       !>--- Gradient Contraction
       call contract(dcndr,dhdcn,tmpgrd,beta=1.0_wp)
       call contract(dqdr,dhdq,tmpgrd,beta=1.0_wp)
-  
+
       !>--- back to output
       gradients(:,:,i) = tmpgrd(:,:)
-    enddo
+    end do
 
     !>--- deallocation
-    deallocate(tmpgrd)
+    deallocate (tmpgrd)
     deallocate (tmp,Pew,dHdq,dHdcn)
     deallocate (dSEdq,dSEdcn,selfEnergy)
     deallocate (S,H0)
@@ -155,7 +154,48 @@ contains
   end subroutine gfn0_eht_occ
 !========================================================================================!
 
+  subroutine generate_config(nel,nao,occ,active)
+    implicit none
+    !> INPUT
+    integer,intent(in) :: nel
+    integer,intent(in) :: nao
+    integer,intent(in) :: active(:)
+    !> OUTPUT
+    real(wp),intent(out) :: occ(nao)
+    !> LOCAL
+    integer :: i,l,dl
+    integer :: nel_active,dnel
 
+    occ = 0.0_wp
+
+    l = size(active,1)
+    nel_active = sum(active)
+
+    if ((nel_active > nel) .or. (l > nao)) then
+      error stop 'error in generate_config()'
+    end if
+
+    dnel = nel - nel_active
+    if (MOD(dnel,2) .ne. 0) then
+      write (stderr,*) 'error in generate_config()'
+      write (stderr,*) 'mismatching number of electrons'
+      error stop
+    end if
+
+    dl = dnel / 2
+    if ((dl + l) > nao) then
+      error stop 'error in generate_config()'
+    end if
+    !>--- fill doubly occupied levels first
+    do i = 1,dl
+      occ(i) = 2.0_wp
+    end do
+    !>--- add the active (user-set) configuration
+    do i = dl + 1,dl + l
+      occ(i) = float(active(i - dl))
+    end do
+
+  end subroutine generate_config
 
 !========================================================================================!
-end module gfn0_module
+end module gfn0_occ

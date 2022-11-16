@@ -89,6 +89,13 @@ set_target_properties(
   WINDOWS_EXPORT_ALL_SYMBOLS TRUE
   Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include"
 )
+target_include_directories(
+  "${PROJECT_NAME}-lib"
+  PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>
+)
 target_link_libraries(
   "${PROJECT_NAME}-lib"
   PUBLIC
@@ -101,9 +108,11 @@ target_link_libraries(
 # Executables
 #
 IF(BUILD_EXE)
+set(srcs2)
+add_subdirectory("testprog")
 add_executable(
   ${PROJECT_NAME}-exe
-  "${srcs}"
+  "${srcs2}" 
 )
 set_target_properties(
   ${PROJECT_NAME}-exe
@@ -115,7 +124,7 @@ set_target_properties(
 target_link_libraries(
   ${PROJECT_NAME}-exe
   PRIVATE
-  "${libs}"
+  "${PROJECT_NAME}-lib"
 )
 ENDIF()
 

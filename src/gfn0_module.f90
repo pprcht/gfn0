@@ -25,6 +25,7 @@ module gfn0_module
   use wfn_module
   use gfn0_qm
   use gfn0_prints
+  use gfn0_occ
   implicit none
   private
 
@@ -33,6 +34,8 @@ module gfn0_module
   public :: TBasisset
   public :: Twavefunction,wfnsetup
   public :: pr_wfn_param 
+  public :: gfn0_eht_occ
+  public :: generate_config
 
   !> from this module
   public :: initGFN0Params

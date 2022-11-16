@@ -98,7 +98,7 @@ subroutine cholesky(iunit,printl,ndim,A,fail)
       write(iunit,'(a)') '**** WARNING ****'
       write(iunit,'(a)') ' Cholesky factorization of the overlap failed!'
       write(iunit,'(a)') ' It is possible that there are near linear dependecies in the basis.'
-      write(iunit,'(a)') ' Therefore PEEQ will work with an orthogonal basis by using'
+      write(iunit,'(a)') ' Therefore GFN0 will work with an orthogonal basis by using'
       write(iunit,'(a)') ' canonical orthogonalization.'
       write(iunit,'(a)') '**** WARNING ****'
       write(iunit,'(a)')

@@ -2,6 +2,7 @@ program gfn0_main
     use iso_fortran_env, only: wp=>real64,stdout=>output_unit
     use testmol
     use gfn0_module
+    use gfn0_api
     implicit none
     
     integer :: nat
@@ -17,6 +18,9 @@ program gfn0_main
    type(TxTBData_mod) :: xtbData !< main data/parameter frame 
    type(Twavefunction) :: wfn    !< wavefunction data
 
+   type(gfn0_data) :: gdat   !< gfn0 wrapper of types
+   type(gfn0_results) :: res   
+
    real(wp) :: energy
    real(wp),allocatable :: gradient(:,:)
 
@@ -29,6 +33,12 @@ program gfn0_main
    real(wp) :: ies,edisp,erep,esrb,eel,gnorm
 
    logical :: fail
+
+   real(wp),allocatable :: occ(:)
+   integer :: nao,nel
+   integer,allocatable :: active(:)
+
+
 !========================================================================================!
     fail = .false.
 
@@ -129,6 +139,42 @@ program gfn0_main
 
 
    deallocate(dqdr,qat,dcndr,cn)
+
+!=======================================================================================!
+   write(*,*)
+   write(*,*) '!===========================================================!'
+   write(*,*)
+   write(*,*) 'API call'
+
+   energy   = 0.0_wp
+   gradient = 0.0_wp 
+   
+   call gfn0_setup(nat,at,xyz,chrg,uhf,gdat)  
+   call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
+  
+   call res%print(stdout)   
+   write(*,'(3x,a5,15x,l)') 'fail?',fail
+
+
+!=======================================================================================!
+   write(*,*)
+   write(*,*) '!===========================================================!'
+   write(*,*)
+
+
+   nel = 10
+   nao = 20 
+   allocate( occ(nao), source = 0.0_wp)
+   allocate( active(2) ,source = 0)
+
+   active = 1
+   call generate_config(nel,nao,occ,active)
+
+   do i=1,nao
+   write(*,*) occ(i)
+   enddo
+
+!=======================================================================================!
    deallocate(gradient)
    deallocate(xyz,at)
 !=======================================================================================!

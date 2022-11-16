@@ -31,7 +31,7 @@ gfn0_lib = library(
   meson.project_name(),
   sources: srcs,
   dependencies: exe_deps,
-#  include_directories: include_directories('include'),
+  include_directories: include_directories('include'),
 )
 
 # Export as dependency

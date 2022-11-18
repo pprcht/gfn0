@@ -36,6 +36,8 @@ check_minimal_compiler_version("Fortran" "${fortran_minimal_versions}")
 
 option(WITH_OpenMP "Enable support for shared memory parallelisation with OpenMP" TRUE)
 
+option(WITH_GBSA "Enable compilation with GBSA/ALPB implicit solvation routines?" TRUE)
+
 option(BUILD_EXE "Build a test binary?" FALSE)
 
 

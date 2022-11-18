@@ -24,6 +24,9 @@ module eeq_module
 !> Implementation of the electronegativity equilibration model
    use iso_fortran_env, only: wp=>real64
    use math_wrapper
+#ifdef WITH_GBSA
+   use solvation_solv_gbsa, only: TBorn
+#endif
    implicit none
    private
 
@@ -36,7 +39,12 @@ contains
 !========================================================================================!
 subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
       & chi, kcn, gam, rad,&
-      & energy, gradient, qat, dqdr)
+      & energy, gradient, qat, dqdr &
+#ifdef WITH_GBSA
+      & ,gbsa,gsolv & 
+#endif
+      & )
+
 
    !> Source for error generation
    character(len=*), parameter :: source = 'eeq_chargeEquilibration'
@@ -62,7 +70,11 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
    real(wp), intent(in) :: cn(:)
    !> Derivative of the coordination number w.r.t. Cartesian coordinates
    real(wp), intent(in) :: dcndr(:, :, :)
-
+#ifdef WITH_GBSA
+   !> GBSA/ALPB object
+   type(TBorn),intent(inout),optional :: gbsa 
+   real(wp),intent(inout),optional    :: gsolv
+#endif
    !> Electrostatic energy
    real(wp), intent(inout), optional :: energy
    !> Molecular gradient
@@ -79,7 +91,7 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
    logical :: deriv, response, exitRun
    integer :: nsh, ndim
    integer :: iat, ish, ii, iid
-   real(wp) :: tmp
+   real(wp) :: tmp,gborn,ghb
 
    deriv = present(gradient)
    response = present(dqdr)
@@ -93,6 +105,7 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
 
    call getCoulombMatrixSmeared(nat, at, xyz, rad, jmat)
 
+
    do iat = 1, nat
       iid = at(iat) !> atom type
       tmp = kcn(iid) / (sqrt(cn(iat)) + 1.0e-14_wp)
@@ -102,6 +115,13 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
       jmat(iat, ndim) = 1.0_wp
       jmat(ndim, iat) = 1.0_wp
    end do
+
+#ifdef WITH_GBSA
+   !> add BornMat
+   if(present(gbsa))then
+    jmat(:nat, :nat) = jmat(:nat, :nat) + gbsa%bornMat
+   endif
+#endif
    xvec(ndim) = float(chrg)
    jmat(ndim, ndim) = 0.0_wp
 
@@ -128,16 +148,27 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
    if (deriv .or. response) then
       allocate(djdr(3, nat, ndim))
       allocate(djdtr(3, ndim))
-      allocate(dxdr(3, nat, ndim))
+!      allocate(dxdr(3, nat, ndim))
       call getCoulombDerivsSmeared(nat, at, xyz, rad, qvec, djdr, djdtr)
       do iat = 1, nat
-        dxdr(:, :, iat) = -dxdcn(iat)*dcndr(:, :, iat)
+!        dxdr(:, :, iat) = -dxdcn(iat)*dcndr(:, :, iat)
+         djdr(:,:,iat) = djdr(:,:,iat) - dxdcn(iat)*dcndr(:, :, iat)
       end do
-      dxdr(:, :, ndim) = 0.0_wp
+!      dxdr(:, :, ndim) = 0.0_wp
+
+#ifdef WITH_GBSA
+     !> implicit solvation contribution 
+     if(present(gbsa))then
+     call gbsa%addBornDeriv(qvec, gborn, ghb, djdr, djdtr)
+     if(present(gsolv))then
+     gsolv = gsolv + gborn + ghb + gbsa%gshift
+     endif
+     endif   
+#endif
 
       if (present(gradient)) then
          call contract(djdr, qvec, gradient, beta=1.0_wp) !>contract312
-         call contract(dxdr, qvec, gradient, beta=1.0_wp) !>contract312
+!         call contract(dxdr, qvec, gradient, beta=1.0_wp) !>contract312
       end if
 
       if (response) then
@@ -148,7 +179,7 @@ subroutine chargeEquilibration(nat, at, xyz, chrg, cn, dcndr, &
          if (present(dqdr)) then
             dqdr(:, :, :) = 0.0_wp
             call contract(djdr, inv(:, :nsh), dqdr, alpha=-1.0_wp, beta=0.0_wp) !>contract323
-            call contract(dxdr, inv(:, :nsh), dqdr, alpha=-1.0_wp, beta=1.0_wp) !>contract323
+!            call contract(dxdr, inv(:, :nsh), dqdr, alpha=-1.0_wp, beta=1.0_wp) !>contract323
          end if
 
       end if

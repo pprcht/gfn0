@@ -131,6 +131,7 @@ contains
 
       !> setup energy weighted density matrix = Pew for gradient calculation
       tmp = occ(:,i) * wfn%emo * evtoau
+      Pew = 0.0_wp
       call dmat(nao,tmp,wfn%C,Pew)
       call build_dSH0(xtbData%nShell,xtbData%hamiltonian,selfEnergy, &
           & dSEdcn,dSEdq,nat,basis,intcut,nao,at,xyz, &
@@ -174,6 +175,15 @@ contains
     if ((nel_active > nel) .or. (l > nao)) then
       error stop 'error in generate_config()'
     end if
+ 
+    do i=1,l
+      if((active(i) > 2) .or. (active(i)<0))then
+       write (stderr,*) 'error in generate_config()'
+       write (stderr,*) 'unphysical occupation in ',i
+       error stop
+      endif
+    enddo
+
 
     dnel = nel - nel_active
     if (MOD(dnel,2) .ne. 0) then

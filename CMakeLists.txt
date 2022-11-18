@@ -102,7 +102,9 @@ target_link_libraries(
   "${libs}"
 )
 
-
+IF(WITH_GBSA)
+add_definitions(-DWITH_GBSA)
+ENDIF()
 
 #
 # Executables

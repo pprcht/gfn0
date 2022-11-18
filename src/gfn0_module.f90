@@ -25,6 +25,7 @@ module gfn0_module
   use wfn_module
   use gfn0_qm
   use gfn0_prints
+  use gfn0_gbsa
   use gfn0_occ
   implicit none
   private
@@ -36,6 +37,9 @@ module gfn0_module
   public :: pr_wfn_param 
   public :: gfn0_eht_occ
   public :: generate_config
+  public :: gfn0_gbsa_init
+  public :: TBorn
+  public :: gfn0_solvation
 
   !> from this module
   public :: initGFN0Params
@@ -75,6 +79,7 @@ contains
 
     !> Get the basisset
     call newBasisset(xtbData,nat,at,basis,ok)
+
     return
   end subroutine initGFN0Params
 
@@ -100,7 +105,7 @@ contains
 !========================================================================================!
 
   subroutine gfn0_electrostatics(nat,at,xyz,chrg,xtbData, &
-     & cn,dcndr,energy,gradient,qat,dqdr)
+     & cn,dcndr,energy,gradient,qat,dqdr,gbsa)
 !> subroutine gfn0_electrostatics
 !> Calculate atomic charges using the charge equilibirum model (EEQ).
 !> Also returns the Cartesian derivative dqdr, as well as the
@@ -116,7 +121,8 @@ contains
     real(wp),intent(in) :: cn(:)
     !> Derivative of the coordination number w.r.t. Cartesian coordinates
     real(wp),intent(in) :: dcndr(:,:,:)
-
+    !> gbsa object
+    type(TBorn),intent(inout),optional :: gbsa 
     !> OUTPUTS
     !> Electrostatic energy
     real(wp),intent(inout),optional :: energy
@@ -127,12 +133,21 @@ contains
     !> Derivative of the partial charges w.r.t. Cartesian coordinates
     real(wp),intent(out),optional :: dqdr(:,:,:)
 
+    if(.not.present(gbsa))then
     call chargeEquilibration(nat,at,xyz,chrg,cn,dcndr, &
        & xtbData%coulomb%electronegativity,  & !chi
        & xtbData%coulomb%kcn,                & !kcn
        & xtbData%coulomb%chemicalHardness,   & !gam
        & xtbData%coulomb%chargeWidth,        & !rad
        & energy,gradient,qat,dqdr)
+    else
+    call chargeEquilibration(nat,at,xyz,chrg,cn,dcndr, &
+       & xtbData%coulomb%electronegativity,  & !chi
+       & xtbData%coulomb%kcn,                & !kcn
+       & xtbData%coulomb%chemicalHardness,   & !gam
+       & xtbData%coulomb%chargeWidth,        & !rad
+       & energy,gradient,qat,dqdr,gbsa)
+    endif
     return
   end subroutine gfn0_electrostatics
 !========================================================================================!

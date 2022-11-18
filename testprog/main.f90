@@ -160,19 +160,45 @@ program gfn0_main
    write(*,*)
    write(*,*) '!===========================================================!'
    write(*,*)
+   write(*,*) 'API call with GBSA(H2O)'
+   energy   = 0.0_wp
+   gradient = 0.0_wp
+
+   call gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.false.)
+   call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
+
+   call res%print(stdout)
+   write(*,'(3x,a5,15x,l)') 'fail?',fail
 
 
-   nel = 10
-   nao = 20 
-   allocate( occ(nao), source = 0.0_wp)
-   allocate( active(2) ,source = 0)
+!=======================================================================================!
+   write(*,*)
+   write(*,*) '!===========================================================!'
+   write(*,*)
+   write(*,*) 'API call with ALPB(H2O)'
+   energy   = 0.0_wp
+   gradient = 0.0_wp
 
-   active = 1
-   call generate_config(nel,nao,occ,active)
+   call gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.true.)
+   call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
 
-   do i=1,nao
-   write(*,*) occ(i)
-   enddo
+   call res%print(stdout)
+   write(*,'(3x,a5,15x,l)') 'fail?',fail
+
+
+!
+!
+!   nel = 10
+!   nao = 20 
+!   allocate( occ(nao), source = 0.0_wp)
+!   allocate( active(2) ,source = 0)
+!
+!   active = 1
+!   call generate_config(nel,nao,occ,active)
+!
+!   do i=1,nao
+!   write(*,*) occ(i)
+!   enddo
 
 !=======================================================================================!
    deallocate(gradient)

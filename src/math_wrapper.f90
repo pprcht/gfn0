@@ -66,6 +66,27 @@ module math_wrapper
   end interface lapack_sygvd
 
 contains
+
+!========================================================================================!
+
+!> Determinat of 3×3 matrix
+pure function matDet3x3(a) result (det)
+
+   !> Matrix
+   real(wp), intent(in) :: a(3, 3)
+
+   !> Determinant
+   real(wp) :: det
+
+   det =  a(1, 1) * a(2, 2) * a(3, 3)  &
+      & - a(1, 1) * a(2, 3) * a(3, 2)  &
+      & - a(1, 2) * a(2, 1) * a(3, 3)  &
+      & + a(1, 2) * a(2, 3) * a(3, 1)  &
+      & + a(1, 3) * a(2, 1) * a(3, 2)  &
+      & - a(1, 3) * a(2, 2) * a(3, 1)
+
+end function matDet3x3
+
 !========================================================================================!
   subroutine contract312(amat,bvec,cvec,alpha,beta)
     !> note: this routine does the same as the gemv312 routines

@@ -23,7 +23,7 @@ list(APPEND srcs
   "${dir}/gfn0_gbsa.F90" 
   "${dir}/gfn0_occ.f90"
   "${dir}/gfn0_module.f90"
-  "${dir}/gfn0_api.f90"
+  "${dir}/gfn0_interface.f90"
 )
 
 set(srcs ${srcs} PARENT_SCOPE)

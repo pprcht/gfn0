@@ -27,7 +27,8 @@ module gfn0_prints
 
 contains
 !========================================================================================!
-  subroutine pr_wfn_param(xtbData,basis,wfn)
+  subroutine pr_wfn_param(iunit,xtbData,basis,wfn)
+    integer :: iunit
     type(TxTBData_mod)  :: xtbData
     type(Tbasisset)     :: basis
     type(TWavefunction) :: wfn
@@ -44,18 +45,18 @@ contains
     intcut = 25.0_wp - 10.0_wp * log10(xtbData%acc)
     intcut = max(20.0_wp,intcut)
 
-    write (stdout,'(/,10x,51("."))')
-    write (stdout,'(10x,":",22x,a,22x,":")') "SETUP"
-    write (stdout,'(10x,":",49("."),":")')
-    write (stdout,intfmt) "# basis functions  ",basis%nbf
-    write (stdout,intfmt) "# atomic orbitals  ",basis%nao
-    write (stdout,intfmt) "# shells           ",basis%nshell
-    write (stdout,intfmt) "# electrons        ",wfn%nel
-    write (stdout,dblfmt) "electronic temp.   ",xtbdata%etemp,"K   "
-    write (stdout,dblfmt) "accuracy           ",xtbData%acc,"    "
-    write (stdout,scifmt) "-> integral cutoff ",intcut,"    "
-    write (stdout,'(10x,51("."))')
-    write (stdout,*)
+    write (iunit,'(/,10x,51("."))')
+    write (iunit,'(10x,":",22x,a,22x,":")') "SETUP"
+    write (iunit,'(10x,":",49("."),":")')
+    write (iunit,intfmt) "# basis functions  ",basis%nbf
+    write (iunit,intfmt) "# atomic orbitals  ",basis%nao
+    write (iunit,intfmt) "# shells           ",basis%nshell
+    write (iunit,intfmt) "# electrons        ",wfn%nel
+    write (iunit,dblfmt) "electronic temp.   ",xtbdata%etemp,"K   "
+    write (iunit,dblfmt) "accuracy           ",xtbData%acc,"    "
+    write (iunit,scifmt) "-> integral cutoff ",intcut,"    "
+    write (iunit,'(10x,51("."))')
+    write (iunit,*)
     return
   end subroutine pr_wfn_param
 !========================================================================================!

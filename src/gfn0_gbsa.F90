@@ -28,7 +28,6 @@ module gfn0_gbsa
 
   public :: TBorn, gfn0_gbsa_init, gfn0_solvation
 
-
 !========================================================================================!
 !========================================================================================!
 contains  !>--- Module routines start here
@@ -65,6 +64,15 @@ subroutine gfn0_gbsa_init(nat,at,alpb,solv,gbsa)
 
    return
 end subroutine gfn0_gbsa_init
+
+subroutine gfn0_gbsa_print(gbsa,iunit)
+   implicit none
+   integer :: iunit
+   type(TBorn),intent(in)     :: gbsa     !> gbsa type
+#ifdef WITH_GBSA
+   call gbsa%info(iunit)
+#endif
+end subroutine gfn0_gbsa_print
 
 !========================================================================================!
 

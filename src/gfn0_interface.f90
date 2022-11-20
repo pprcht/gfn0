@@ -1,9 +1,9 @@
 !====================================================!
-! module tblite_api
+! module gfn0_interface
 ! An interface to GFN0 calculations
 !====================================================!
 
-module gfn0_api
+module gfn0_interface
   use iso_fortran_env,only:wp => real64,stdout => output_unit
   use gfn0_module
   implicit none
@@ -33,7 +33,7 @@ module gfn0_api
   end type gfn0_results
 
   !> module routines
-  public :: gfn0_setup
+  public :: gfn0_init
   public :: gfn0_singlepoint
   interface gfn0_singlepoint
     module procedure :: gfn0_singlepoint_full
@@ -45,6 +45,8 @@ module gfn0_api
     module procedure :: gfn0_occ_singlepoint_full
     module procedure :: gfn0_occ_singlepoint_wrap
   end interface gfn0_occ_singlepoint
+ 
+  public :: gfn0_print_summary
 
 !========================================================================================!
 !========================================================================================!
@@ -69,7 +71,25 @@ contains  !>--- Module routines start here
 
 !========================================================================================!
 
-  subroutine gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv,alpb)
+  subroutine gfn0_print_summary(iunit,gdat,res)
+    implicit none
+    integer, intent(in) :: iunit
+    type(gfn0_data),intent(in)    :: gdat
+    type(gfn0_results),intent(in),optional :: res
+    
+    call pr_wfn_param(iunit,gdat%xtbData,gdat%basis,gdat%wfn) 
+    if(allocated(gdat%gbsa))then
+    call gdat%gbsa%info(iunit)
+    endif
+    if(present(res))then
+    call res%print(iunit)
+    endif
+
+  end subroutine gfn0_print_summary
+
+!========================================================================================!
+
+  subroutine gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv,alpb)
     implicit none
     !> INPUT
     integer,intent(in)  :: nat
@@ -103,7 +123,7 @@ contains  !>--- Module routines start here
     end if
 
     return
-  end subroutine gfn0_setup
+  end subroutine gfn0_init
 !========================================================================================!
 
   subroutine gfn0_singlepoint_full(nat,at,xyz,chrg,uhf,basis,xtbData,wfn,gbsa, &
@@ -245,12 +265,12 @@ contains  !>--- Module routines start here
 
     if (present(solv)) then
       if (present(alpb)) then
-        call gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv,alpb)
+        call gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv,alpb)
       else
-        call gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv)
+        call gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv)
       end if
     else
-     call gfn0_setup(nat,at,xyz,chrg,uhf,gdat) 
+     call gfn0_init(nat,at,xyz,chrg,uhf,gdat) 
     end if
     call gfn0_singlepoint_wrap(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail)
 
@@ -394,4 +414,6 @@ contains  !>--- Module routines start here
 
 !========================================================================================!
 
-end module gfn0_api
+
+
+end module gfn0_interface

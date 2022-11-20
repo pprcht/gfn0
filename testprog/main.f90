@@ -2,7 +2,7 @@ program gfn0_main
     use iso_fortran_env, only: wp=>real64,stdout=>output_unit
     use testmol
     use gfn0_module
-    use gfn0_api
+    use gfn0_interface
     implicit none
     
     integer :: nat
@@ -117,7 +117,7 @@ program gfn0_main
     write(*,*)
     write(*,*) 'Calculating EHT energy'
     call wfnsetup(xtbData, basis, nat, at, uhf, chrg, wfn)
-    call pr_wfn_param(xtbdata,basis,wfn)
+    call pr_wfn_param(stdout,xtbdata,basis,wfn)
     call gfn0_eht(nat, at, xyz, xtbData, basis, cn, dcndr, qat, dqdr, &
    &                wfn, eel, gradient, fail)
     write(*,'(3x,a5,1x,f16.8)') 'Eel',eel
@@ -149,7 +149,8 @@ program gfn0_main
    energy   = 0.0_wp
    gradient = 0.0_wp 
    
-   call gfn0_setup(nat,at,xyz,chrg,uhf,gdat)  
+   call gfn0_init(nat,at,xyz,chrg,uhf,gdat)  
+   call gfn0_print_summary(stdout,gdat)
    call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
   
    call res%print(stdout)   
@@ -164,10 +165,10 @@ program gfn0_main
    energy   = 0.0_wp
    gradient = 0.0_wp
 
-   call gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.false.)
+   call gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.false.)
    call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
-
-   call res%print(stdout)
+   call gfn0_print_summary(stdout,gdat,res)
+   !call res%print(stdout)
    write(*,'(3x,a5,15x,l)') 'fail?',fail
 
 
@@ -179,10 +180,10 @@ program gfn0_main
    energy   = 0.0_wp
    gradient = 0.0_wp
 
-   call gfn0_setup(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.true.)
+   call gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.true.)
    call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
-
-   call res%print(stdout)
+   call gfn0_print_summary(stdout,gdat,res)
+   !call res%print(stdout)
    write(*,'(3x,a5,15x,l)') 'fail?',fail
 
 

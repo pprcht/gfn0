@@ -1,19 +1,25 @@
-! This file is part of xtb.
+!================================================================================!
+! This file is part of gfn0.
 !
-! Copyright (C) 2020 Sebastian Ehlert
+! Copyright (C) 2022 Philipp Pracht
 !
-! xtb is free software: you can redistribute it and/or modify it under
+! gfn0 is free software: you can redistribute it and/or modify it under
 ! the terms of the GNU Lesser General Public License as published by
 ! the Free Software Foundation, either version 3 of the License, or
 ! (at your option) any later version.
 !
-! xtb is distributed in the hope that it will be useful,
+! gfn0 is distributed in the hope that it will be useful,
 ! but WITHOUT ANY WARRANTY; without even the implied warranty of
 ! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ! GNU Lesser General Public License for more details.
 !
 ! You should have received a copy of the GNU Lesser General Public License
-! along with xtb.  If not, see <https://www.gnu.org/licenses/>.
+! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
+!--------------------------------------------------------------------------------!
+!> The original (unmodified) source code can be found under the GNU LGPL 3.0 license
+!> Copyright (C) 2019-2020 Sebastian Ehlert
+!> at https://github.com/grimme-lab/xtb
+!================================================================================!
 
 !> Implementation for generalized Born and related solvation models
 module solvation_solv_gbsa
@@ -27,7 +33,7 @@ module solvation_solv_gbsa
       & addBornDerivSaltStill, addBornDerivStill
    use solvation_solv_lebedev, only : gridSize, getAngGrid
    use solvation_solv_sasa, only : compute_numsa
-
+   use solvation_solv_state, only : solutionState
 
    use solvation_type_solvation, only : TSolvation
    implicit none
@@ -41,6 +47,16 @@ module solvation_solv_gbsa
 
 
    type, extends(TSolvation) :: TBorn
+
+      !> meta info
+      character(len=:), allocatable :: solvent
+      character(len=:), allocatable :: paramFile
+      integer :: state
+      real(wp) :: temperature
+      real(wp) :: density
+      real(wp) :: molarMass
+      real(wp) :: bornOffset
+      real(wp) :: ionStrength
 
       !> number of atoms
       integer :: nat
@@ -190,6 +206,9 @@ module solvation_solv_gbsa
       !> Get complete interaction matrix
       procedure :: addBornDeriv
 
+      !> print
+      procedure :: info
+   
    end type TBorn
 
 
@@ -201,6 +220,7 @@ module solvation_solv_gbsa
 
    real(wp), parameter :: autoaa = 0.52917726_wp
    real(wp), parameter :: aatoau = 1.0_wp/autoaa
+   real(wp),parameter :: autokcal = 627.50947428_wp
    real(wp), parameter :: pi = 3.1415926535897932384626433832795029_wp
    real(wp), parameter :: fourpi = 4.0_wp * pi 
 
@@ -210,6 +230,15 @@ module solvation_solv_gbsa
    real(wp), parameter :: ah0 = 0.5_wp
    real(wp), parameter :: ah1 = 3._wp/(4.0_wp*w)
    real(wp), parameter :: ah3 = -1._wp/(4.0_wp*w3)
+
+   !> Solvent density (g/cm^3) and molar mass (g/mol)
+   real(wp), parameter :: molcm3toau = 8.92388e-2_wp
+
+   !> Surface tension (mN/m=dyn/cm)
+   real(wp), parameter :: surfaceTension = 1.0e-5_wp
+   real(wp), parameter :: mNmtokcal = 4.0305201015221386e-4_wp
+   real(wp), parameter :: kcaltomNm = 1.0_wp/mNmtokcal
+   real(wp), parameter :: automNm = autokcal * kcaltomNm
 
    !> Surface tension (in au)
    real(wp), parameter :: gammas = 1.0e-5_wp
@@ -1135,6 +1164,88 @@ pure subroutine addHBondDeriv(nat,q,hbw,dhbdw,dsdrt,ghb,dAmatdr)
    enddo
 
 end subroutine addHBondDeriv
+
+
+subroutine info(self, unit)
+
+   !> Data structure
+   class(TBorn), intent(in) :: self
+
+   !> Unit for IO
+   integer, intent(in) :: unit
+
+   write(unit, '(6x, "*", 1x, a, ":", t40)', advance='no') "Solvation model"
+   if (self%alpbet > 0.0_wp) then
+      write(unit, '(a)') "ALPB"
+   else
+      write(unit, '(a)') "GBSA"
+   end if
+
+   write(unit, '(8x, a, t40, a)') "Solvent", self%solvent
+   write(unit, '(8x, a, t40, a)') "Parameter file", self%paramFile
+   write(unit, '(8x, a, t40, es14.4)') &
+      & "Dielectric constant", self%dielectricConst
+
+   write(unit, '(8x, a, t40)', advance='no') "Reference state"
+   select case(self%state)
+   case default
+      write(unit, '(a)') 'gsolv [1 M gas/solution]'
+   case(solutionState%reference)
+      write(unit, '(a)') 'gsolv=reference [X=1]'
+   case(solutionState%mol1bar)
+      write(unit, '(a)') 'gsolv [1 bar gas/1 M solution]'
+   end select
+
+   write(unit, '(8x, a, t40, es14.4, 1x, a, t60, es14.4, 1x, a)') &
+      & "Free energy shift", self%gshift, "Eh", &
+      & self%gshift * autokcal, "kcal/mol"
+   write(unit, '(8x, a, t40, es14.4, 1x, a)') &
+      & "Temperature", self%temperature, "K"
+   write(unit, '(8x, a, t40, es14.4, 1x, a)') &
+      & "Density", self%density / (molcm3toau/self%molarMass), "kg/L"
+   write(unit, '(8x, a, t40, es14.4, 1x, a)') &
+      & "Solvent mass", self%molarMass, "g/mol"
+
+   write(unit, '(8x, a, t40)', advance='no') "Interaction kernel"
+   select case(self%kernel)
+   case default
+      write(unit, '(i0, 1x, a)') self%kernel, '(internal error)'
+   case(gbKernel%still)
+      write(unit, '(a)') 'Still'
+   case(gbKernel%p16)
+      write(unit, '(a)') 'P16'
+   end select
+
+   write(unit, '(8x, a, t40, es14.4)') &
+      "Born radius scaling (c1)", self%bornScale
+   write(unit, '(8x, a, t40, a)') "Born radii integrator", "GBOBC"
+   write(unit, '(8x, a, t40, es14.4, 1x, a, t60, es14.4, 1x, a)') &
+      "Born offset", self%bornOffset, "a0", self%bornOffset/autoaa, "AA"
+
+   write(unit, '(8x, a, t40)', advance='no') "H-bond correction"
+   if (any(self%hbmag < 0.0_wp)) then
+      write(unit, '(a)') "true"
+   else
+      write(unit, '(a)') "false"
+   end if
+
+   write(unit, '(8x, a, t40)', advance='no') "Ion screening"
+   if (self%ionStrength > 0.0_wp) then
+      write(unit, '(a)') "true"
+   else
+      write(unit, '(a)') "false"
+   end if
+
+   if (allocated(self%gamsasa)) then
+      write(unit, '(8x, a, t40, es14.4, 1x, a, t60, es14.4, 1x, a)') &
+         "Surface tension", surfaceTension, "Eh", surfaceTension*automNm, "dyn/cm"
+   end if
+
+   write(unit, '(8x, a, t40, i14, 1x, a)') &
+      "Grid points", self%nAng, "per atom"
+
+   write(unit,*)
+end subroutine info
 
 
 end module solvation_solv_gbsa

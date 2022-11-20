@@ -130,4 +130,36 @@ target_link_libraries(
 )
 ENDIF()
 
+#
+# Export targets for other projects
+#
+add_library("${PROJECT_NAME}" INTERFACE)
+target_link_libraries("${PROJECT_NAME}" INTERFACE "${PROJECT_NAME}-lib")
+install(
+  TARGETS
+  "${PROJECT_NAME}"
+  "${PROJECT_NAME}-lib"
+  EXPORT
+  "${PROJECT_NAME}-targets"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+)
+install(
+  EXPORT
+  "${PROJECT_NAME}-targets"
+  NAMESPACE
+  "${PROJECT_NAME}::"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+)
+install(
+  DIRECTORY
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+install(
+  DIRECTORY
+  "${CMAKE_CURRENT_BINARY_DIR}/include/"
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${module-dir}"
+)
+
 

@@ -35,16 +35,18 @@ gfn0_lib = library(
 )
 
 # Export as dependency
-gfn0_inc = gfn0_lib.private_dir_include()
+gfn0_inc = [include_directories('include'), gfn0_lib.private_dir_include()]
 gfn0_dep = declare_dependency(
   link_with: gfn0_lib,
   include_directories: gfn0_inc,
   dependencies: exe_deps,
+  variables: {'includedir': meson.current_source_dir() / 'include'},
 )
 
 
 # Create executable target
 if get_option('build_exe')
+subdir('testprog')
 gfn0_exe = executable(
   meson.project_name(),
   sources: prog,

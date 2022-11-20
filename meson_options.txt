@@ -41,3 +41,10 @@ option(
   value: false,
   description: 'build with a test binary',
 )
+option(
+  'with_gbsa',
+  type: 'boolean',
+  value: true,
+  description: 'build with GBSA/ALPB support',
+)
+

@@ -48,6 +48,7 @@ module wfn_module
       real(wp),allocatable :: foccb(:)  ! for beta space
       real(wp),allocatable :: emo(:)    ! orbital energies
       real(wp),allocatable :: C(:,:)    ! molecular orbitals
+      real(wp),allocatable :: S(:,:)    ! overlap (not always allocated)
    contains
    procedure :: allocate => allocate_wavefunction
    procedure :: deallocate => deallocate_wavefunction
@@ -76,6 +77,7 @@ subroutine allocate_wavefunction(self,n,nshell,nao)
    allocate( self%foccb(nao),  source = 0.0_wp )
    allocate( self%emo(nao),    source = 0.0_wp )
    allocate( self%C(nao,nao),  source = 0.0_wp )
+   !> overlap not automatically allocated!
 end subroutine allocate_wavefunction
 
 subroutine deallocate_wavefunction(self)
@@ -91,6 +93,7 @@ subroutine deallocate_wavefunction(self)
    if(allocated(self%foccb))deallocate(self%foccb)
    if(allocated(self%emo))  deallocate(self%emo)
    if(allocated(self%C))    deallocate(self%C)
+   if(allocated(self%S))    deallocate(self%S)
 end subroutine deallocate_wavefunction
 
 end module wfn_module

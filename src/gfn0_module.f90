@@ -433,6 +433,7 @@ contains
        & selfEnergy,dSEdcn,dSEdq)
     call build_SH0(xtbData%nShell,xtbData%hamiltonian,selfEnergy, &
           & nat,at,basis,nao,xyz,intcut,S,H0)
+    if(allocated(wfn%S)) wfn%S = S
 
     !>--- Diagonalization
     call solve(nao,H0,S,wfn%C,wfn%P,wfn%emo,fail)

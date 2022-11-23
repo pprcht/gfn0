@@ -16,6 +16,11 @@ module gfn0_interface
     type(TxTBData_mod),allocatable  :: xtbData !< main data/parameter frame
     type(Twavefunction),allocatable :: wfn     !< wavefunction data
     type(TBorn),allocatable         :: gbsa    !< gbsa/alpb model
+    type(gfn0_partials),allocatable :: part    !< partial derivatives
+    logical :: update = .true.
+    real(wp),allocatable :: refxyz(:,:)
+    real(wp) :: eclassic
+    real(wp),allocatable :: gclassic(:,:)
   end type gfn0_data
 
   public :: gfn0_results
@@ -42,7 +47,6 @@ module gfn0_interface
   end interface gfn0_singlepoint
   public :: gfn0_occ_singlepoint
   interface gfn0_occ_singlepoint
-    module procedure :: gfn0_occ_singlepoint_full
     module procedure :: gfn0_occ_singlepoint_wrap
   end interface gfn0_occ_singlepoint
  
@@ -106,6 +110,7 @@ contains  !>--- Module routines start here
     if (allocated(gdat%xtbData)) deallocate (gdat%xtbData)
     if (allocated(gdat%wfn)) deallocate (gdat%wfn)
     if (allocated(gdat%gbsa)) deallocate (gdat%gbsa)
+    if (allocated(gdat%part)) deallocate (gdat%part)
 
     allocate (gdat%basis)
     allocate (gdat%xtbData)
@@ -122,11 +127,20 @@ contains  !>--- Module routines start here
       end if
     end if
 
+    allocate(gdat%part)
+ 
+    if(allocated(gdat%refxyz))deallocate(gdat%refxyz)
+    allocate(gdat%refxyz(3,nat), source=0.0_wp)
+    !gdat%refxyz = xyz   
+    gdat%update = .true.
+    if(allocated(gdat%gclassic))deallocate(gdat%gclassic)
+    allocate(gdat%gclassic(3,nat), source=0.0_wp)
+
     return
   end subroutine gfn0_init
 !========================================================================================!
 
-  subroutine gfn0_singlepoint_full(nat,at,xyz,chrg,uhf,basis,xtbData,wfn,gbsa, &
+  subroutine gfn0_singlepoint_classical(nat,at,xyz,chrg,uhf,basis,xtbData,wfn,part,gbsa, &
   &          energy,gradient,fail,res)
     implicit none
     !> INPUT
@@ -138,6 +152,7 @@ contains  !>--- Module routines start here
     type(TBasisset),intent(inout)     :: basis   !< basis set info
     type(TxTBData_mod),intent(inout)  :: xtbData !< main data/parameter frame
     type(Twavefunction),intent(inout) :: wfn     !< wavefunction data
+    type(gfn0_partials),intent(inout) :: part
     type(TBorn),allocatable,intent(inout) :: gbsa
     type(gfn0_results),intent(inout),optional :: res
     !> OUTPUT
@@ -152,7 +167,6 @@ contains  !>--- Module routines start here
     real(wp),allocatable :: dqdr(:,:,:)
 
     real(wp) :: ies,edisp,erep,esrb,eel,esolv,gnorm
-
     energy = 0.0_wp
     gradient = 0.0_wp
     fail = .false.
@@ -163,41 +177,37 @@ contains  !>--- Module routines start here
     esolv = 0.0_wp
     eel = 0.0_wp
     gnorm = 0.0_wp
-
 !>--- CN and CN gradient
-    allocate (cn(nat),dcndr(3,nat,nat),source=0.0_wp)
-    call gfn0_getCN(nat,at,xyz,cn,dcndr)
+    if(.not.allocated(part%cn)) allocate (part%cn(nat),source=0.0_wp)
+    if(.not.allocated(part%dcndr)) allocate (part%dcndr(3,nat,nat),source=0.0_wp)
+    call gfn0_getCN(nat,at,xyz,part%cn,part%dcndr)
 
-    allocate (qat(nat),dqdr(3,nat,nat))
+    if(.not.allocated(part%qat)) allocate (part%qat(nat),source=0.0_wp)
+    if(.not.allocated(part%dqdr)) allocate (part%dqdr(3,nat,nat),source=0.0_wp)
 !>--- Solvation+EEQ (if required)
     if (allocated(gbsa)) then
       call gfn0_solvation(nat,at,xyz,gbsa,esolv,gradient)
       call gfn0_electrostatics(nat,at,xyz,chrg,xtbData, &
-      & cn,dcndr,ies,gradient,qat,dqdr,gbsa)
+      & part%cn,part%dcndr,ies,gradient,part%qat,part%dqdr,gbsa)
     else
 !>--- EEQ charges, gradients and IES energy (gasphase)
       call gfn0_electrostatics(nat,at,xyz,chrg,xtbData, &
-      & cn,dcndr,ies,gradient,qat,dqdr)
+      & part%cn,part%dcndr,ies,gradient,part%qat,part%dqdr)
     end if
 
 !>--- D4 two-body dispersion energy
     call gfn0_dispersion(nat,at,xyz,chrg,xtbData, &
-    &  cn,dcndr,edisp,gradient)
+    &  part%cn,part%dcndr,edisp,gradient)
 
 !>--- Repulsion energy
     call gfn0_repulsion(nat,at,xyz,xtbData%repulsion,erep,gradient)
 
 !>--- SRB energy
-    call gfn0_shortranged(nat,at,xyz,xtbData%srb,cn,dcndr, &
+    call gfn0_shortranged(nat,at,xyz,xtbData%srb,part%cn,part%dcndr, &
     &                     esrb,gradient)
 
-!>--- QM part
-    !call wfnsetup(xtbData,basis,nat,at,uhf,chrg,wfn)
-    call gfn0_eht(nat,at,xyz,xtbData,basis,cn,dcndr,qat,dqdr, &
-   &                wfn,eel,gradient,fail)
-
 !>--- Add up total energy
-    energy = ies + edisp + erep + esrb + esolv + eel
+    energy = ies + edisp + erep + esrb + esolv
     gnorm = sqrt(sum(gradient**2))
 
     if (present(res)) then
@@ -211,7 +221,59 @@ contains  !>--- Module routines start here
       res%gnorm = gnorm
     end if
 
-    deallocate (dqdr,qat,dcndr,cn)
+    !deallocate (dqdr,qat,dcndr,cn)
+  end subroutine gfn0_singlepoint_classical
+
+!========================================================================================!
+
+  subroutine gfn0_singlepoint_full(nat,at,xyz,chrg,uhf,basis,xtbData,wfn,part,gbsa, &
+  &          energy,gradient,fail,res)
+    implicit none
+    !> INPUT
+    integer,intent(in)  :: nat
+    integer,intent(in)  :: at(nat)
+    real(wp),intent(in) :: xyz(3,nat)
+    integer,intent(in)  :: uhf
+    integer,intent(in)  :: chrg
+    type(TBasisset),intent(inout)     :: basis   !< basis set info
+    type(TxTBData_mod),intent(inout)  :: xtbData !< main data/parameter frame
+    type(Twavefunction),intent(inout) :: wfn     !< wavefunction data
+    type(gfn0_partials),intent(inout) :: part
+    type(TBorn),allocatable,intent(inout) :: gbsa
+    type(gfn0_results),intent(inout),optional :: res
+    !> OUTPUT
+    real(wp),intent(out) :: energy
+    real(wp),intent(out) :: gradient(3,nat)
+    logical,intent(out)  :: fail
+    !> LOCAL
+    real(wp) :: ies,edisp,erep,esrb,eel,esolv,gnorm
+
+    energy = 0.0_wp
+    gradient = 0.0_wp
+    fail = .false.
+    eel = 0.0_wp
+    gnorm = 0.0_wp
+
+!>--- Classical part
+    call gfn0_singlepoint_classical(nat,at,xyz,chrg,uhf,basis,xtbData,wfn,part,gbsa, &
+  &          energy,gradient,fail,res=res)
+
+!>--- QM part
+    !call wfnsetup(xtbData,basis,nat,at,uhf,chrg,wfn)
+    call gfn0_eht(nat,at,xyz,xtbData,basis,part%cn,part%dcndr,part%qat,part%dqdr, &
+   &                wfn,eel,gradient,fail)
+
+!>--- Add up total energy
+    energy = energy + eel
+    gnorm = sqrt(sum(gradient**2))
+
+    if (present(res)) then
+      res%etot = energy
+      res%eel = eel
+      res%gnorm = gnorm
+    end if
+
+    !deallocate (dqdr,qat,dcndr,cn)
   end subroutine gfn0_singlepoint_full
 
 !========================================================================================!
@@ -231,17 +293,47 @@ contains  !>--- Module routines start here
     real(wp),intent(out) :: energy
     real(wp),intent(out) :: gradient(3,nat)
     logical,intent(out)  :: fail
+    !> LOCAL
+    real(wp) :: eel,gnorm
+    
+!>--- Check if geometry has changed
+    call check_geo(nat,xyz,gdat%refxyz,gdat%update)
+
+    energy = 0.0_wp
+    gradient = 0.0_wp
+    fail = .false.
+    eel = 0.0_wp
+    gnorm = 0.0_wp
+
+!>--- Classical part
+    if(gdat%update)then
+    call gfn0_singlepoint_classical(nat,at,xyz,chrg,uhf, &
+  &  gdat%basis, gdat%xtbData, gdat%wfn, gdat%part, gdat%gbsa, &
+  &          gdat%eclassic, gdat%gclassic, fail, res=res)
+    endif
+    energy = gdat%eclassic
+    gradient = gdat%gclassic
+
+!>--- QM part
+!    call gfn0_eht_occ(nat,at,xyz,occ, gdat%xtbData, gdat%basis, &
+!    &   gdat%part%cn, gdat%part%dcndr, gdat%part%qat, gdat%part%dqdr, &
+!    &   gdat%wfn, eel,gradient,fail)
+
+    call gfn0_eht_var(nat,at,xyz, gdat%xtbData, gdat%basis, gdat%wfn, gdat%part, &
+     &                    eel,gradient,fail, update=gdat%update)
+
+
+!>--- Add  EHT energy to total
+      energy = energy + eel
+      gnorm = sqrt(sum(gradient**2))
 
     if (present(res)) then
-      call gfn0_singlepoint_full(nat,at,xyz,chrg,uhf,&
-  &        gdat%basis,gdat%xtbData,gdat%wfn,gdat%gbsa, &
-  &        energy,gradient,fail,res)
-    else
-      call gfn0_singlepoint_full(nat,at,xyz,chrg,uhf, &
-  &          gdat%basis,gdat%xtbData,gdat%wfn,gdat%gbsa, &
-  &          energy,gradient,fail)
+      res%etot = energy
+      res%eel = eel
+      res%gnorm = gnorm
     end if
 
+    gdat%update = .false.
   end subroutine gfn0_singlepoint_wrap
 
 !========================================================================================!
@@ -278,114 +370,8 @@ contains  !>--- Module routines start here
 
 !========================================================================================!
 
-  subroutine gfn0_occ_singlepoint_full(nat,at,xyz,chrg,uhf,nlev,occ, &
-  &          basis,xtbData,wfn,gbsa, &
-  &          energies,gradients,fail,res)
-    implicit none
-    !> INPUT
-    type(TBasisset),intent(inout)     :: basis   !< basis set info
-    type(TxTBData_mod),intent(inout)  :: xtbData !< main data/parameter frame
-    type(Twavefunction),intent(inout) :: wfn     !< wavefunction data
-    integer,intent(in)  :: nat
-    integer,intent(in)  :: at(nat)
-    real(wp),intent(in) :: xyz(3,nat)
-    integer,intent(in)  :: nlev
-    real(wp),intent(in) :: occ(basis%nao,nlev)
-    integer,intent(in)  :: uhf
-    integer,intent(in)  :: chrg
-    type(gfn0_results),intent(inout),optional :: res
-    type(TBorn),allocatable,intent(inout) :: gbsa
-    !> OUTPUT
-    real(wp),intent(out) :: energies(nlev)
-    real(wp),intent(out) :: gradients(3,nat,nlev)
-    logical,intent(out)  :: fail
-    !> LOCAL
-    real(wp),allocatable :: cn(:)
-    real(wp),allocatable :: dcndr(:,:,:)
-
-    real(wp),allocatable :: qat(:)
-    real(wp),allocatable :: dqdr(:,:,:)
-
-    real(wp),allocatable :: eels(:)
-    real(wp),allocatable :: gradient(:,:)
-
-    real(wp) :: ies,edisp,erep,esrb,eel,esolv,energy,gnorm
-    integer :: i
-
-    energies = 0.0_wp
-    gradients = 0.0_wp
-    fail = .false.
-    ies = 0.0_wp
-    edisp = 0.0_wp
-    erep = 0.0_wp
-    esrb = 0.0_wp
-    esolv = 0.0_wp
-    eel = 0.0_wp
-    gnorm = 0.0_wp
-
-    allocate (gradient(3,nat),source=0.0_wp)
-
-!>--- CN and CN gradient
-    allocate (cn(nat),dcndr(3,nat,nat),source=0.0_wp)
-    call gfn0_getCN(nat,at,xyz,cn,dcndr)
-
-    allocate (qat(nat),dqdr(3,nat,nat))
-!>--- Solvation+EEQ (if required)
-    if (allocated(gbsa)) then
-      call gfn0_solvation(nat,at,xyz,gbsa,esolv,gradient)
-      call gfn0_electrostatics(nat,at,xyz,chrg,xtbData, &
-      & cn,dcndr,ies,gradient,qat,dqdr,gbsa)
-    else
-!>--- EEQ charges, gradients and IES energy (gasphase)
-      call gfn0_electrostatics(nat,at,xyz,chrg,xtbData, &
-      & cn,dcndr,ies,gradient,qat,dqdr)
-    end if
-
-!>--- D4 two-body dispersion energy
-    call gfn0_dispersion(nat,at,xyz,chrg,xtbData, &
-    &  cn,dcndr,edisp,gradient)
-
-!>--- Repulsion energy
-    call gfn0_repulsion(nat,at,xyz,xtbData%repulsion,erep,gradient)
-
-!>--- SRB energy
-    call gfn0_shortranged(nat,at,xyz,xtbData%srb,cn,dcndr, &
-    &                     esrb,gradient)
-
-!>--- QM part
-    !call wfnsetup(xtbData,basis,nat,at,uhf,chrg,wfn)
-    allocate (eels(nlev),source=0.0_wp)
-    !    call gfn0_eht(nat,at,xyz,xtbData,basis,cn,dcndr,qat,dqdr, &
-    !   &                wfn,eel,gradient,fail)
-    call gfn0_eht_occ(nat,at,xyz,nlev,occ,xtbData,basis,cn,dcndr,qat,dqdr, &
-   &                wfn,eels,gradients,fail)
-
-!>--- Add up total energies
-    do i = 1,nlev
-      energies(i) = ies + edisp + erep + esrb + esolv + eels(i)
-      gradients(:,:,i) = gradients(:,:,i) + gradient(:,:)
-      energy = energy + energies(i) / float(nlev)
-      gnorm = gnorm + sqrt(sum(gradient**2)) / float(nlev)
-    end do
-
-    if (present(res)) then
-      res%etot = energy
-      res%ies = ies
-      res%edisp = edisp
-      res%erep = erep
-      res%esrb = esrb
-      res%esolv = esolv
-      res%eel = eel
-      res%gnorm = gnorm
-    end if
-
-    deallocate (eels,dqdr,qat,dcndr,cn,gradient)
-  end subroutine gfn0_occ_singlepoint_full
-
-!========================================================================================!
-
-  subroutine gfn0_occ_singlepoint_wrap(nat,at,xyz,chrg,uhf,nlev,occ,gdat, &
-&          energies,gradients,fail,res)
+  subroutine gfn0_occ_singlepoint_wrap(nat,at,xyz,chrg,uhf,occ,gdat, &
+&          energy,gradient,fail,res)
     implicit none
     !> INPUT
     integer,intent(in)  :: nat
@@ -394,26 +380,75 @@ contains  !>--- Module routines start here
     integer,intent(in)  :: uhf
     integer,intent(in)  :: chrg
     type(gfn0_data),intent(inout) :: gdat
-    integer,intent(in)  :: nlev
-    real(wp),intent(in) :: occ(gdat%basis%nao,nlev)
+    real(wp),intent(in) :: occ(gdat%basis%nao)
     type(gfn0_results),intent(inout),optional :: res
     !> OUTPUT
-    real(wp),intent(out) :: energies(nlev)
-    real(wp),intent(out) :: gradients(3,nat,nlev)
+    real(wp),intent(out) :: energy
+    real(wp),intent(out) :: gradient(3,nat)
     logical,intent(out)  :: fail
+    !> LOCAL
+    real(wp) :: ies,edisp,erep,esrb,eel,esolv,gnorm
+    integer :: i
+
+!>--- Check if geometry has changed
+    call check_geo(nat,xyz,gdat%refxyz,gdat%update)
+
+    energy = 0.0_wp
+    gradient = 0.0_wp
+    fail = .false.
+    eel = 0.0_wp
+    gnorm = 0.0_wp
+
+!>--- Classical part
+    if(gdat%update)then
+    call gfn0_singlepoint_classical(nat,at,xyz,chrg,uhf, &
+  &  gdat%basis, gdat%xtbData, gdat%wfn, gdat%part, gdat%gbsa, &
+  &          gdat%eclassic, gdat%gclassic, fail, res=res)
+    endif
+    energy = gdat%eclassic
+    gradient = gdat%gclassic
+
+!>--- QM part
+!    call gfn0_eht_occ(nat,at,xyz,occ, gdat%xtbData, gdat%basis, &
+!    &   gdat%part%cn, gdat%part%dcndr, gdat%part%qat, gdat%part%dqdr, &
+!    &   gdat%wfn, eel,gradient,fail)
+
+    call gfn0_eht_var(nat,at,xyz, gdat%xtbData, gdat%basis, gdat%wfn, gdat%part, &
+     &                    eel,gradient,fail, update=gdat%update, occ=occ)
+ 
+
+!>--- Add  EHT energy to total
+      energy = energy + eel
+      gnorm = sqrt(sum(gradient**2))
 
     if (present(res)) then
-      call gfn0_occ_singlepoint_full(nat,at,xyz,chrg,uhf,nlev,occ, &
-  &   gdat%basis,gdat%xtbData,gdat%wfn,gdat%gbsa,energies,gradients,fail,res)
-    else
-      call gfn0_occ_singlepoint_full(nat,at,xyz,chrg,uhf,nlev,occ, &
-  &   gdat%basis,gdat%xtbData,gdat%wfn,gdat%gbsa,energies,gradients,fail)
+      res%etot = energy
+      res%eel = eel
+      res%gnorm = gnorm
     end if
 
+
+    gdat%update = .false. 
   end subroutine gfn0_occ_singlepoint_wrap
 
 !========================================================================================!
 
-
-
+  subroutine check_geo(nat,xyz,refxyz,update)
+    implicit none
+    integer,intent(in) :: nat
+    real(wp),intent(in) :: xyz(3,nat)
+    real(wp),intent(inout) :: refxyz(3,nat)
+    logical,intent(out)  :: update
+    real(wp),allocatable :: diff(:,:)
+    real(wp),parameter :: thr = 1.0d-8
+    update = .false. 
+    allocate(diff(3,nat),source=0.0_wp)
+    diff(:,:) = abs( xyz(:,:) - refxyz(:,:)) 
+    if(any(diff.gt.thr)) then
+      update = .true.
+      refxyz = xyz
+    endif
+    deallocate(diff)
+  end subroutine check_geo
+!========================================================================================!
 end module gfn0_interface

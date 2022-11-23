@@ -168,7 +168,6 @@ program gfn0_main
    call gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.false.)
    call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
    call gfn0_print_summary(stdout,gdat,res)
-   !call res%print(stdout)
    write(*,'(3x,a5,15x,l)') 'fail?',fail
 
 
@@ -183,23 +182,7 @@ program gfn0_main
    call gfn0_init(nat,at,xyz,chrg,uhf,gdat,solv='h2o',alpb=.true.)
    call gfn0_singlepoint(nat,at,xyz,chrg,uhf,gdat,energy,gradient,fail,res)
    call gfn0_print_summary(stdout,gdat,res)
-   !call res%print(stdout)
    write(*,'(3x,a5,15x,l)') 'fail?',fail
-
-
-!
-!
-!   nel = 10
-!   nao = 20 
-!   allocate( occ(nao), source = 0.0_wp)
-!   allocate( active(2) ,source = 0)
-!
-!   active = 1
-!   call generate_config(nel,nao,occ,active)
-!
-!   do i=1,nao
-!   write(*,*) occ(i)
-!   enddo
 
 !=======================================================================================!
    deallocate(gradient)

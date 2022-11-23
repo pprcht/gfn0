@@ -29,7 +29,7 @@ module cn_module
 
 
    interface getCoordinationNumber
-      module procedure :: getCoordinationNumberWrap
+   !   module procedure :: getCoordinationNumberWrap
       module procedure :: getCoordinationNumberLP
    end interface getCoordinationNumber
 
@@ -193,7 +193,7 @@ subroutine getCoordinationNumberWrap(nat, at, xyz, cf, cn, dcndr, cutoff)
    end if
 
    !> Actual call to the lattice point version of the CN evaluation
-   call getCoordinationNumber(nat, at, xyz, rCutoff, cf, cn, dcndr)
+   call getCoordinationNumberLP(nat, at, xyz, rCutoff, cf, cn, dcndr)
 
 end subroutine getCoordinationNumberWrap
 

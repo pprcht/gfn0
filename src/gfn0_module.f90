@@ -34,7 +34,8 @@ module gfn0_module
   public :: TxTBData_mod
   public :: TBasisset
   public :: Twavefunction,wfnsetup
-  public :: pr_wfn_param 
+  public :: gfn0_partials
+  public :: pr_wfn_param
   public :: gfn0_eht_occ
   public :: generate_config
   public :: gfn0_gbsa_init
@@ -49,6 +50,7 @@ module gfn0_module
   public :: gfn0_repulsion
   public :: gfn0_shortranged
   public :: gfn0_eht
+  public :: gfn0_eht_var
 
   !> privat params
   real(wp),private,parameter :: autoev = 27.21138505_wp
@@ -122,7 +124,7 @@ contains
     !> Derivative of the coordination number w.r.t. Cartesian coordinates
     real(wp),intent(in) :: dcndr(:,:,:)
     !> gbsa object
-    type(TBorn),intent(inout),optional :: gbsa 
+    type(TBorn),intent(inout),optional :: gbsa
     !> OUTPUTS
     !> Electrostatic energy
     real(wp),intent(inout),optional :: energy
@@ -133,21 +135,21 @@ contains
     !> Derivative of the partial charges w.r.t. Cartesian coordinates
     real(wp),intent(out),optional :: dqdr(:,:,:)
 
-    if(.not.present(gbsa))then
-    call chargeEquilibration(nat,at,xyz,chrg,cn,dcndr, &
-       & xtbData%coulomb%electronegativity,  & !chi
-       & xtbData%coulomb%kcn,                & !kcn
-       & xtbData%coulomb%chemicalHardness,   & !gam
-       & xtbData%coulomb%chargeWidth,        & !rad
-       & energy,gradient,qat,dqdr)
+    if (.not. present(gbsa)) then
+      call chargeEquilibration(nat,at,xyz,chrg,cn,dcndr, &
+         & xtbData%coulomb%electronegativity,  & !chi
+         & xtbData%coulomb%kcn,                & !kcn
+         & xtbData%coulomb%chemicalHardness,   & !gam
+         & xtbData%coulomb%chargeWidth,        & !rad
+         & energy,gradient,qat,dqdr)
     else
-    call chargeEquilibration(nat,at,xyz,chrg,cn,dcndr, &
-       & xtbData%coulomb%electronegativity,  & !chi
-       & xtbData%coulomb%kcn,                & !kcn
-       & xtbData%coulomb%chemicalHardness,   & !gam
-       & xtbData%coulomb%chargeWidth,        & !rad
-       & energy,gradient,qat,dqdr,gbsa)
-    endif
+      call chargeEquilibration(nat,at,xyz,chrg,cn,dcndr, &
+         & xtbData%coulomb%electronegativity,  & !chi
+         & xtbData%coulomb%kcn,                & !kcn
+         & xtbData%coulomb%chemicalHardness,   & !gam
+         & xtbData%coulomb%chargeWidth,        & !rad
+         & energy,gradient,qat,dqdr,gbsa)
+    end if
     return
   end subroutine gfn0_electrostatics
 !========================================================================================!
@@ -433,7 +435,7 @@ contains
        & selfEnergy,dSEdcn,dSEdq)
     call build_SH0(xtbData%nShell,xtbData%hamiltonian,selfEnergy, &
           & nat,at,basis,nao,xyz,intcut,S,H0)
-    if(allocated(wfn%S)) wfn%S = S
+    if (allocated(wfn%S)) wfn%S = S
 
     !>--- Diagonalization
     call solve(nao,H0,S,wfn%C,wfn%P,wfn%emo,fail)
@@ -473,6 +475,126 @@ contains
 
     return
   end subroutine gfn0_eht
+!========================================================================================!
+  subroutine gfn0_eht_var(nat,at,xyz,xtbData,basis,wfn,part, &
+     &                    eel,gradient,fail,update,occ)
+!> subroutine gfn0_eht_var
+!> Set up the H0 hamiltonian and overlap,
+!> and from that get the "QM" part of the energy
+    use wfn_module
+    use math_wrapper,only:contract
+    !> INPUT
+    integer,intent(in) :: nat
+    integer,intent(in) :: at(nat)
+    real(wp),intent(in) :: xyz(3,nat)
+    type(TBasisset),intent(in)   :: basis
+    type(TxTBData_mod),intent(in) :: xtbData
+    type(Twavefunction),intent(inout) :: wfn
+    type(gfn0_partials),intent(inout) :: part
+    logical,intent(in),optional :: update
+    real(wp),intent(in),optional :: occ(basis%nao)
+    !> OUTPUT
+    real(wp),intent(out) :: eel
+    real(wp),intent(inout) :: gradient(:,:)
+    logical,intent(out)  :: fail
 
+    !> LOCAL
+    integer :: i,j,k
+    real(wp) :: intcut,scfconv
+    real(wp) :: et,efa,efb,nfoda,nfodb,ga,gb
+    integer :: maxshell,nao,naop
+    real(wp),allocatable :: S(:,:)
+    real(wp),allocatable :: H0(:)
+    real(wp),allocatable :: dHdcn(:)
+    real(wp),allocatable :: dHdq(:)
+    real(wp),allocatable :: Pew(:,:)
+    real(wp),allocatable :: tmp(:)
+    logical :: refresh
+
+    eel = 0.0_wp
+    fail = .false.
+    if(present(update))then
+      refresh = update
+    else
+      refresh = .true.
+    endif 
+
+    !>---  Numerical stuff and cutoffs
+    intcut = 25.0_wp - 10.0_wp * log10(xtbData%acc)
+    intcut = max(20.0_wp,intcut)
+    scfconv = 1.e-6_wp * xtbData%acc
+
+    !>--- allocation
+    nao = basis%nao
+    naop = basis%nao * (basis%nao + 1) / 2
+    if (refresh) then
+      allocate (H0(naop),source=0.0_wp)
+      allocate (S(nao,nao),source=0.0_wp)
+      maxshell = maxval(xtbData%nshell)
+
+      if (.not. allocated(part%selfEnergy)) &
+      &  allocate (part%selfEnergy(maxshell,nat),source=0.0_wp)
+      if (.not. allocated(part%dSEdcn)) &
+      &  allocate (part%dSEdcn(maxshell,nat),source=0.0_wp)
+      if (.not. allocated(part%dSEdq)) &
+      &  allocate (part%dSEdq(maxshell,nat),source=0.0_wp)
+
+      et = xtbData%etemp
+      wfn%q = part%qat
+
+      !>--- Setup, AO integrals of S and H0
+      call getSelfEnergy(xtbData%hamiltonian,xtbData%nShell,at,part%cn,wfn%q, &
+         & part%selfEnergy,part%dSEdcn,part%dSEdq)
+      call build_SH0(xtbData%nShell,xtbData%hamiltonian,part%selfEnergy, &
+            & nat,at,basis,nao,xyz,intcut,S,H0)
+      if (allocated(wfn%S)) wfn%S = S
+
+      !>--- Diagonalization
+      call solve(nao,H0,S,wfn%C,wfn%P,wfn%emo,fail)
+      deallocate (S,H0)
+      if (fail) return
+    end if
+
+    !>--- Electronic energy
+    allocate (dHdcn(nat),dHdq(nat),Pew(nao,nao),tmp(nao),source=0.0_wp)
+    if (present(occ)) then
+      tmp = occ
+      call dmat(nao,tmp,wfn%C,wfn%P)
+      eel = sum(tmp * wfn%emo) * evtoau
+      tmp(:) = occ(:) * wfn%emo * evtoau
+    else
+      if (et .gt. 0.1_wp) then
+        if (wfn%ihomoa + 1 .le. nao) then
+          call fermismear(.false.,nao,wfn%ihomoa,et,wfn%emo,wfn%focca,nfoda,efa,ga)
+        end if
+        if (wfn%ihomob + 1 .le. nao) then
+          call fermismear(.false.,nao,wfn%ihomob,et,wfn%emo,wfn%foccb,nfodb,efb,gb)
+        end if
+        wfn%focc = wfn%focca + wfn%foccb
+      end if
+      tmp = wfn%focc
+      call dmat(nao,tmp,wfn%C,wfn%P)
+      eel = sum(tmp * wfn%emo) * evtoau + ga + gb
+      tmp(:) = wfn%focc(:) * wfn%emo * evtoau
+    end if
+
+    !>--- Gradient Setup
+    !> setup energy weighted density matrix = Pew for gradient calculation
+    call dmat(nao,tmp,wfn%C,Pew)
+    call build_dSH0(xtbData%nShell,xtbData%hamiltonian, &
+        & part%selfEnergy,part%dSEdcn,part%dSEdq, &
+        & nat,basis,intcut,nao,at,xyz, &
+        & wfn%P,Pew,gradient,dHdcn,dHdq)
+
+    !>--- Gradient Contraction
+    call contract(part%dcndr,dhdcn,gradient,beta=1.0_wp)
+    call contract(part%dqdr,dhdq,gradient,beta=1.0_wp)
+
+    !>--- deallocation
+    deallocate (tmp,Pew,dHdq,dHdcn)
+    !deallocate (dSEdq,dSEdcn,selfEnergy)
+
+    return
+  end subroutine gfn0_eht_var
 !========================================================================================!
 end module gfn0_module

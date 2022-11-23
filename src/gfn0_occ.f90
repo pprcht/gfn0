@@ -40,13 +40,13 @@ contains
 
 !========================================================================================!
 
-  subroutine gfn0_eht_occ(nat,at,xyz,nlev,occ,xtbData,basis,cn,dcndr,qat,dqdr, &
-     &                wfn,eels,gradients,fail)
+  subroutine gfn0_eht_occ(nat,at,xyz,occ,xtbData,basis,cn,dcndr,qat,dqdr, &
+     &                wfn,eel,gradient,fail)
 !> subroutine gfn0_eht_occ
 !> Set up the H0 hamiltonian and overlap,
 !> and from that get the "QM" part of the energy
 !> Takes an occupation matrix as input and can calculate
-!> the energy for multiple (nlev) occupations
+!> the energy for given occupations
 !> No Fermi smearing is conducted!
     !> INPUT
     type(TBasisset),intent(in)   :: basis
@@ -55,15 +55,14 @@ contains
     integer,intent(in) :: nat
     integer,intent(in) :: at(nat)
     real(wp),intent(in) :: xyz(3,nat)
-    integer,intent(in)  :: nlev
-    real(wp),intent(in) :: occ(basis%nao,nlev)
+    real(wp),intent(in) :: occ(basis%nao)
     real(wp),intent(in) :: cn(:)
     real(wp),intent(in) :: dcndr(:,:,:)
     real(wp),intent(in) :: qat(:)
     real(wp),intent(in) :: dqdr(:,:,:)
     !> OUTPUT
-    real(wp),intent(out) :: eels(nlev)
-    real(wp),intent(inout) :: gradients(3,nat,nlev)
+    real(wp),intent(out) :: eel
+    real(wp),intent(inout) :: gradient(3,nat)
     logical,intent(out)  :: fail
 
     !> LOCAL
@@ -80,9 +79,8 @@ contains
     real(wp),allocatable :: dHdq(:)
     real(wp),allocatable :: Pew(:,:)
     real(wp),allocatable :: tmp(:)
-    real(wp),allocatable :: tmpgrd(:,:)
 
-    eels = 0.0_wp
+    eel = 0.0_wp
     fail = .false.
 
     !>---  Numerical stuff and cutoffs
@@ -115,40 +113,31 @@ contains
     if (fail) return
 
 !==========! GRADIENT(S) !=========!
-    allocate (dHdcn(nat),dHdq(nat),pew(nao,nao),tmp(nao), &
-    &      source=0.0_wp)
-    allocate (tmpgrd(3,nat),source=0.0_wp)
+    allocate (dHdcn(nat),dHdq(nat),pew(nao,nao),tmp(nao), source=0.0_wp)
 
-    do i = 1,nlev
       !>--- setup
       dHdcn = 0.0_wp
       dHdq = 0.0_wp
-      tmp(:) = occ(:,i)
-      tmpgrd(:,:) = gradients(:,:,i)
+      tmp(:) = occ(:)
 
       !>--- No Fermi Smearing this time!
       call dmat(nao,tmp,wfn%C,wfn%P)
-      eels(i) = sum(tmp * wfn%emo) * evtoau
+      eel = sum(tmp * wfn%emo) * evtoau
 
       !> setup energy weighted density matrix = Pew for gradient calculation
-      tmp = occ(:,i) * wfn%emo * evtoau
+      tmp(:) = occ(:) * wfn%emo * evtoau
       Pew = 0.0_wp
       call dmat(nao,tmp,wfn%C,Pew)
       call build_dSH0(xtbData%nShell,xtbData%hamiltonian,selfEnergy, &
           & dSEdcn,dSEdq,nat,basis,intcut,nao,at,xyz, &
-          & wfn%P,Pew,tmpgrd,dHdcn,dHdq)
+          & wfn%P,Pew,gradient,dHdcn,dHdq)
 
       !>--- Gradient Contraction
-      call contract(dcndr,dhdcn,tmpgrd,beta=1.0_wp)
-      call contract(dqdr,dhdq,tmpgrd,beta=1.0_wp)
-
-      !>--- back to output
-      gradients(:,:,i) = tmpgrd(:,:)
-    end do
+      call contract(dcndr,dhdcn,gradient,beta=1.0_wp)
+      call contract(dqdr,dhdq,gradient,beta=1.0_wp)
 
     !>--- deallocation
-    deallocate (tmpgrd)
-    deallocate (tmp,Pew,dHdq,dHdcn)
+    deallocate (tmp,Pew,dHdcn,dHdq)
     deallocate (dSEdq,dSEdcn,selfEnergy)
     deallocate (S,H0)
 

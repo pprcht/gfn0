@@ -30,6 +30,7 @@ module gfn0_types
    public :: TRepulsionData, TCoulombData, THamiltonianData
    public :: TDispersionData,TShortRangeData
    public :: newData, getData
+   public :: gfn0_partials
 
    interface newData
       module procedure :: newAtomicData
@@ -325,35 +326,15 @@ module gfn0_types
    end type TxTBParameter
 
 !========================================================================================!
-
-   type :: scc_results
-      real(wp) :: e_atom = 0.0_wp
-      real(wp) :: e_elec = 0.0_wp
-      real(wp) :: e_total = 0.0_wp
-      real(wp) :: e_rep = 0.0_wp
-      real(wp) :: e_es = 0.0_wp
-      real(wp) :: e_aes = 0.0_wp
-      real(wp) :: e_axc = 0.0_wp
-      real(wp) :: e_disp = 0.0_wp
-      real(wp) :: e_xb = 0.0_wp
-      real(wp) :: g_born = 0.0_wp
-      real(wp) :: g_sasa = 0.0_wp
-      real(wp) :: g_hb = 0.0_wp
-      real(wp) :: g_shift = 0.0_wp
-      real(wp) :: hl_gap = 0.0_wp
-      real(wp) :: dipole(3) = (/0.0_wp,0.0_wp,0.0_wp/)
-      real(wp) :: molpol = 0.0_wp
-      real(wp) :: g_solv = 0.0_wp
-      real(wp) :: g_total = 0.0_wp
-      real(wp) :: gnorm = 0.0_wp
-      logical  :: converged = .true.
-      real(wp) :: e_bond = 0.0_wp
-      real(wp) :: e_angl = 0.0_wp
-      real(wp) :: e_tors = 0.0_wp
-      real(wp) :: e_hb = 0.0_wp
-      real(wp) :: e_batm = 0.0_wp
-      real(wp) :: e_ext = 0.0_wp
-   end type scc_results
+   type :: gfn0_partials
+    real(wp),allocatable :: cn(:)
+    real(wp),allocatable :: dcndr(:,:,:)
+    real(wp),allocatable :: qat(:)
+    real(wp),allocatable :: dqdr(:,:,:)
+    real(wp),allocatable :: selfEnergy(:,:)
+    real(wp),allocatable :: dSEdcn(:,:)
+    real(wp),allocatable :: dSEdq(:,:)
+   end type gfn0_partials 
 
 !========================================================================================!
 

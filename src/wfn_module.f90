@@ -52,6 +52,7 @@ module wfn_module
    contains
    procedure :: allocate => allocate_wavefunction
    procedure :: deallocate => deallocate_wavefunction
+   procedure :: refresh_occu
    end type TWavefunction
 
 contains
@@ -95,5 +96,81 @@ subroutine deallocate_wavefunction(self)
    if(allocated(self%C))    deallocate(self%C)
    if(allocated(self%S))    deallocate(self%S)
 end subroutine deallocate_wavefunction
+
+subroutine refresh_occu(self,nel,uhf)
+!(ndim,   nel,    nopen,    ihomoa,    ihomob,    focca,    foccb)
+!(wfn%nao,wfn%nel,wfn%nopen,wfn%ihomoa,wfn%ihomob,wfn%focca,wfn%foccb)
+   class(TWavefunction),intent(inout) :: self
+   integer,intent(in)  :: nel  !> total # of electrons
+   integer,intent(in)  :: uhf  !> uhf input parameter
+    integer  :: nopen
+    integer  :: ndim
+    integer  :: ihomoa
+    integer  :: ihomob
+    integer,allocatable  :: focc(:)
+    integer  :: i,na,nb,ihomo
+
+    self%nel = nel
+    self%nopen = uhf
+    if (self%nopen == 0 .and. mod(self%nel,2) /= 0) self%nopen = 1
+        
+    nopen = self%nopen
+    ndim = self%nao  
+    allocate(focc(ndim), source=0)
+    focc = 0
+    self%focca = 0.0_wp
+    self%foccb = 0.0_wp
+!>--- even nel
+    if (mod(nel,2) .eq. 0) then
+      ihomo = nel / 2
+      do i = 1,ihomo
+        focc(i) = 2
+      end do
+      if (2 * ihomo .ne. nel) then
+        ihomo = ihomo + 1
+        focc(ihomo) = 1
+        if (nopen .eq. 0) nopen = 1
+      end if
+      if (nopen .gt. 1) then
+        do i = 1,nopen / 2
+          focc(ihomo - i + 1) = focc(ihomo - i + 1) - 1
+          focc(ihomo + i) = focc(ihomo + i) + 1
+        end do
+      end if
+!>--- odd nel
+    else
+      na = nel / 2 + (nopen - 1) / 2 + 1
+      nb = nel / 2 - (nopen - 1) / 2
+      do i = 1,na
+        focc(i) = focc(i) + 1
+      end do
+      do i = 1,nb
+        focc(i) = focc(i) + 1
+      end do
+    end if
+
+    do i = 1,ndim
+      if (focc(i) .eq. 2) then
+        self%focca(i) = 1.0d0
+        self%foccb(i) = 1.0d0
+      end if
+      if (focc(i) .eq. 1) self%focca(i) = 1.0d0
+    end do
+
+    ihomoa = 0
+    ihomob = 0
+    do i = 1,ndim
+      if (self%focca(i) .gt. 0.99) ihomoa = i
+      if (self%foccb(i) .gt. 0.99) ihomob = i
+    end do
+
+    self%ihomoa = ihomoa
+    self%ihomo  = ihomoa
+    self%ihomob = ihomob
+    self%focc   = self%focca + self%foccb
+    deallocate(focc)
+
+end subroutine refresh_occu
+
 
 end module wfn_module

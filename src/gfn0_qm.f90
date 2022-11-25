@@ -28,6 +28,12 @@ module gfn0_qm
   public :: wfnsetup
   public :: getSelfEnergy
   public :: build_SH0
+  public :: fermismear
+  interface fermismear
+    module procedure :: fermismear_original
+    module procedure :: fermismear_nmax
+  end interface fermismear
+  public :: occ_nmax
 
   private :: lin
   private :: ncore
@@ -62,6 +68,7 @@ contains
       call occu(wfn%nao,wfn%nel,wfn%nopen,wfn%ihomoa,wfn%ihomob,wfn%focca,wfn%foccb)
       wfn%focc = wfn%focca + wfn%foccb
       wfn%ihomo = wfn%ihomoa
+!      call wfn%refresh_occu(wfn%nel, uhf)
     else
       wfn%focc = 0.0_wp
       wfn%ihomo = 0
@@ -735,8 +742,67 @@ contains
   end subroutine occu
 
 !=========================================================================================!
+  subroutine occ_nmax(nao,occ,nmaxa,nmaxb,ihomoa,ihomob)
+    implicit none
+    !> INPUT
+    integer,intent(in) :: nao
+    real(wp),intent(in) :: occ(nao)
+    !> OUTPUT 
+    integer,allocatable,intent(out) :: nmaxa(:)
+    integer,allocatable,intent(out) :: nmaxb(:)
+    integer,intent(out) :: ihomoa,ihomob
+    !> LOCAL
+    integer,allocatable :: iocc(:),iocca(:),ioccb(:)
+    integer :: i,na,nb 
+  
+    if(.not.allocated(nmaxa)) allocate(nmaxa(nao))
+    if(.not.allocated(nmaxb)) allocate(nmaxb(nao))
 
-  subroutine fermismear(prt,norbs,nel,t,eig,occ,fod,e_fermi,s)
+    allocate(iocc(nao), source = 0)
+    allocate(iocca(nao),ioccb(nao) , source = 0)
+    iocc(:) = nint(occ(:))
+
+    ihomoa = 0
+    ihomob = 0
+    na = 0
+    nb = 0
+    nmaxa(:) = 1
+    nmaxb(:) = 1
+    do i=1,nao
+      if(iocc(i) == 2)then
+      iocca(i) = 1
+      na = na+1
+      ioccb(i) = 1
+      nb = nb+1
+      elseif(iocc(i) == 1)then
+      iocca(i) = 1
+      na = na+1
+      ioccb(i) = 0
+      else
+      iocca(i) = 0
+      ioccb(i) = 0
+      endif
+    enddo
+    do i=1,nao
+      if(iocca(i) == 1) ihomoa = i
+      if(ioccb(i) == 1) ihomob = i 
+    enddo 
+    do i=1,nao
+      if(i < ihomoa )then
+        if( iocca(i) == 0 ) nmaxa(i) = 0
+      endif
+      if(i < ihomob )then
+        if( ioccb(i) == 0 ) nmaxb(i) = 0
+      endif
+    enddo
+
+    deallocate(ioccb,iocca)
+    deallocate(iocc)
+  end subroutine occ_nmax
+
+!=========================================================================================!
+
+  subroutine fermismear_original(prt,norbs,nel,t,eig,occ,fod,e_fermi,s)
     integer,intent(in)  :: norbs
     integer,intent(in)  :: nel
     real(wp),intent(in)  :: eig(norbs)
@@ -798,8 +864,84 @@ contains
       write (*,'('' t,e(fermi),nfod : '',2f10.3,f10.6)') t,e_fermi,fod
     end if
 
-  end subroutine fermismear
+  end subroutine fermismear_original
 
+!=========================================================================================!
+
+  subroutine fermismear_nmax(prt,norbs,ihomo,nmax,t,eig,occ,ef,TS)
+    !> INPUT
+    logical,intent(in)  :: prt    !> print statement
+    integer,intent(in)  :: norbs  !> number of orbitals
+    integer,intent(in)  :: ihomo  !> position of the H(S)OMO
+    integer,intent(in)  :: nmax(norbs) !> maximum allowed occupation
+    real(wp),intent(in)  :: t     !> (electronic) temperature
+    real(wp),intent(in)  :: eig(norbs) !> orbital energies
+    !> OUTPUT
+    real(wp),intent(out) :: occ(norbs)  !> orbital occupations
+    real(wp),intent(out),optional :: ef !> fermi temperature
+    real(wp),intent(out),optional :: TS !> electronic free energy
+    !> LOCAL
+    real(wp) :: e_fermi,s
+    real(wp) :: bkt,occt,total_number,fod
+    real(wp) :: total_dfermi,dfermifunct,fermifunct,change_fermi
+
+    real(wp),parameter :: autoev = 27.21138505_wp
+    real(wp),parameter :: kB = 3.166808578545117e-06_wp
+    real(wp),parameter :: boltz = kB * autoev
+    real(wp),parameter :: thr = 1.d-9
+    integer :: ncycle,i,j,m,k,i1,i2,nholes
+    real(wp) :: deigkt
+
+    bkt = boltz * t
+
+    e_fermi = 0.5 * (eig(ihomo) + eig(ihomo + 1))
+    nholes = count((nmax(:)<1),1)
+    occt = ihomo -  nholes
+
+    do ncycle = 1,200
+      total_number = 0.0
+      total_dfermi = 0.0
+      do i = 1,norbs
+        fermifunct = 0.0
+        dfermifunct = 0.0
+
+        deigkt = (eig(i) - e_fermi) / bkt
+
+        if ((nmax(i) > 0) .AND. (deigkt .lt. 50)) then
+          fermifunct = 1.0 / (exp(deigkt) + 1.0)
+          dfermifunct = exp(deigkt) / &
+          &       (bkt * (exp(deigkt) + 1.0)**2)
+        end if
+        occ(i) = fermifunct
+        total_number = total_number + fermifunct
+        total_dfermi = total_dfermi + dfermifunct
+      end do
+      change_fermi = (occt - total_number) / total_dfermi
+      e_fermi = e_fermi + change_fermi
+      if (abs(occt - total_number) .le. thr) exit
+    end do
+
+    fod = 0
+    s = 0
+    do i = 1,norbs
+      if (occ(i) .gt. thr .and. 1.0d00 - occ(i) .gt. thr) &
+      &   s = s + occ(i) * log(occ(i)) + (1.0d0 - occ(i)) * log(1.0d00 - occ(i))
+      if (eig(i) .lt. e_fermi) then
+        fod = fod + 1.0d0 - occ(i)
+      else
+        fod = fod + occ(i)
+      end if
+    end do
+    s = s * kB * t
+
+    if (prt) then
+      write (*,'('' t,e(fermi),nfod : '',2f10.3,f10.6)') t,e_fermi,fod
+    end if
+
+    if(present(ef)) ef = e_fermi
+    if(present(TS)) TS = s
+
+  end subroutine fermismear_nmax
 !=========================================================================================!
   subroutine dmat(ndim,focc,C,P)
   !> density matrix

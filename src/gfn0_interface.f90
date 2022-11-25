@@ -61,6 +61,7 @@ contains  !>--- Module routines start here
   subroutine print_gfn0_res(self,iunit)
     class(gfn0_results) :: self
     integer,intent(in) :: iunit
+    write (iunit,*)
     write (iunit,*) "GFN0 calculation summary"
     write (iunit,'(3x,a5,1x,f16.8)') 'IES',self%ies
     write (iunit,'(3x,a5,1x,f16.8)') 'Edisp',self%edisp
@@ -71,6 +72,7 @@ contains  !>--- Module routines start here
     write (iunit,*) '--------------------------'
     write (iunit,'(3x,a5,1x,f16.8)') 'Etot',self%etot
     write (iunit,'(3x,a5,1x,f16.8)') 'gnorm',self%gnorm
+    write (iunit,*)
   end subroutine print_gfn0_res
 
 !========================================================================================!
@@ -84,6 +86,9 @@ contains  !>--- Module routines start here
     call pr_wfn_param(iunit,gdat%xtbData,gdat%basis,gdat%wfn) 
     if(allocated(gdat%gbsa))then
     call gdat%gbsa%info(iunit)
+    endif
+    if(allocated(gdat%wfn))then
+     call pr_orbital_eigenvalues(iunit,gdat%wfn,9)
     endif
     if(present(res))then
     call res%print(iunit)

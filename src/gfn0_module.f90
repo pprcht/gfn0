@@ -36,6 +36,7 @@ module gfn0_module
   public :: Twavefunction,wfnsetup
   public :: gfn0_partials
   public :: pr_wfn_param
+  public :: pr_orbital_eigenvalues
   public :: gfn0_eht_occ
   public :: generate_config
   public :: gfn0_gbsa_init
@@ -509,6 +510,8 @@ contains
     real(wp),allocatable :: dHdq(:)
     real(wp),allocatable :: Pew(:,:)
     real(wp),allocatable :: tmp(:)
+    integer :: ihomoa,ihomob
+    integer,allocatable  :: nmaxa(:),nmaxb(:)
     logical :: refresh
 
     eel = 0.0_wp
@@ -539,7 +542,6 @@ contains
       if (.not. allocated(part%dSEdq)) &
       &  allocate (part%dSEdq(maxshell,nat),source=0.0_wp)
 
-      et = xtbData%etemp
       wfn%q = part%qat
 
       !>--- Setup, AO integrals of S and H0
@@ -556,12 +558,24 @@ contains
     end if
 
     !>--- Electronic energy
+    et = xtbData%etemp
+    eel = 0.0_wp
     allocate (dHdcn(nat),dHdq(nat),Pew(nao,nao),tmp(nao),source=0.0_wp)
     if (present(occ)) then
-      tmp = occ
-      call dmat(nao,tmp,wfn%C,wfn%P)
-      eel = sum(tmp * wfn%emo) * evtoau
-      tmp(:) = occ(:) * wfn%emo * evtoau
+      if(et .gt. 0.1_wp)then
+        call occ_nmax(nao,occ,nmaxa,nmaxb,ihomoa,ihomob)
+        if(ihomoa + 1 .le. nao )then
+          call fermismear(.false.,nao,ihomoa,nmaxa,et,wfn%emo,wfn%focca,TS=ga)
+        endif
+        if(ihomob + 1 .le. nao )then
+          call fermismear(.false.,nao,ihomob,nmaxb,et,wfn%emo,wfn%foccb,TS=gb)
+        endif
+        wfn%focc = wfn%focca + wfn%foccb
+        !eel = ga + gb
+      else  
+        wfn%focc = occ
+      endif
+      !write(*,*) sum(occ),ihomoa,ihomob
     else
       if (et .gt. 0.1_wp) then
         if (wfn%ihomoa + 1 .le. nao) then
@@ -572,11 +586,14 @@ contains
         end if
         wfn%focc = wfn%focca + wfn%foccb
       end if
-      tmp = wfn%focc
-      call dmat(nao,tmp,wfn%C,wfn%P)
-      eel = sum(tmp * wfn%emo) * evtoau + ga + gb
-      tmp(:) = wfn%focc(:) * wfn%emo * evtoau
+      eel = ga + gb
     end if
+    !write(*,*) wfn%focc
+    tmp = wfn%focc
+    call dmat(nao,tmp,wfn%C,wfn%P)
+    eel = eel + sum(tmp * wfn%emo) * evtoau
+    tmp(:) = wfn%focc(:) * wfn%emo * evtoau
+
 
     !>--- Gradient Setup
     !> setup energy weighted density matrix = Pew for gradient calculation
@@ -591,6 +608,8 @@ contains
     call contract(part%dqdr,dhdq,gradient,beta=1.0_wp)
 
     !>--- deallocation
+    if(allocated(nmaxa)) deallocate(nmaxa)
+    if(allocated(nmaxb)) deallocate(nmaxb)
     deallocate (tmp,Pew,dHdq,dHdcn)
     !deallocate (dSEdq,dSEdcn,selfEnergy)
 

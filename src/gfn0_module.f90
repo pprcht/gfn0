@@ -149,7 +149,7 @@ contains
          & xtbData%coulomb%kcn,                & !kcn
          & xtbData%coulomb%chemicalHardness,   & !gam
          & xtbData%coulomb%chargeWidth,        & !rad
-         & energy,gradient,qat,dqdr,gbsa)
+         & energy,gradient,qat,dqdr,gbsa=gbsa)
     end if
     return
   end subroutine gfn0_electrostatics

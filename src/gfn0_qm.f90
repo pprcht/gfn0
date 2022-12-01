@@ -547,7 +547,7 @@ contains
     use math_wrapper,only:lapack_sygvd
     !> INPUT
     integer,intent(in)   :: ndim
-    real(wp),intent(in)  :: H(ndim*(ndim+1)/2)
+    real(wp),intent(in)  :: H(ndim * (ndim + 1) / 2)
     real(wp),intent(in)   :: S(ndim,ndim)
     !> OUTPUT
     real(wp),intent(out)  :: X(ndim,ndim)
@@ -559,14 +559,14 @@ contains
 
     !>--- SETUP
     fail = .false.
-   
+
     do i = 1,ndim
-      do j = 1, i
-         k = j+i*(i-1)/2
-         X(j,i) = H(k)
-         X(i,j) = X(j,i)
-      enddo
-    enddo
+      do j = 1,i
+        k = j + i * (i - 1) / 2
+        X(j,i) = H(k)
+        X(i,j) = X(j,i)
+      end do
+    end do
     P = S
     !>--- DIAG IN NON-ORTHORGONAL BASIS
     call lapack_sygvd(1,'v','u',ndim,X,ndim,P,ndim,e,info)
@@ -747,19 +747,19 @@ contains
     !> INPUT
     integer,intent(in) :: nao
     real(wp),intent(in) :: occ(nao)
-    !> OUTPUT 
+    !> OUTPUT
     integer,allocatable,intent(out) :: nmaxa(:)
     integer,allocatable,intent(out) :: nmaxb(:)
     integer,intent(out) :: ihomoa,ihomob
     !> LOCAL
     integer,allocatable :: iocc(:),iocca(:),ioccb(:)
-    integer :: i,na,nb 
-  
-    if(.not.allocated(nmaxa)) allocate(nmaxa(nao))
-    if(.not.allocated(nmaxb)) allocate(nmaxb(nao))
+    integer :: i,na,nb
 
-    allocate(iocc(nao), source = 0)
-    allocate(iocca(nao),ioccb(nao) , source = 0)
+    if (.not. allocated(nmaxa)) allocate (nmaxa(nao))
+    if (.not. allocated(nmaxb)) allocate (nmaxb(nao))
+
+    allocate (iocc(nao),source=0)
+    allocate (iocca(nao),ioccb(nao),source=0)
     iocc(:) = nint(occ(:))
 
     ihomoa = 0
@@ -768,36 +768,36 @@ contains
     nb = 0
     nmaxa(:) = 1
     nmaxb(:) = 1
-    do i=1,nao
-      if(iocc(i) == 2)then
-      iocca(i) = 1
-      na = na+1
-      ioccb(i) = 1
-      nb = nb+1
-      elseif(iocc(i) == 1)then
-      iocca(i) = 1
-      na = na+1
-      ioccb(i) = 0
+    do i = 1,nao
+      if (iocc(i) == 2) then
+        iocca(i) = 1
+        na = na + 1
+        ioccb(i) = 1
+        nb = nb + 1
+      elseif (iocc(i) == 1) then
+        iocca(i) = 1
+        na = na + 1
+        ioccb(i) = 0
       else
-      iocca(i) = 0
-      ioccb(i) = 0
-      endif
-    enddo
-    do i=1,nao
-      if(iocca(i) == 1) ihomoa = i
-      if(ioccb(i) == 1) ihomob = i 
-    enddo 
-    do i=1,nao
-      if(i < ihomoa )then
-        if( iocca(i) == 0 ) nmaxa(i) = 0
-      endif
-      if(i < ihomob )then
-        if( ioccb(i) == 0 ) nmaxb(i) = 0
-      endif
-    enddo
+        iocca(i) = 0
+        ioccb(i) = 0
+      end if
+    end do
+    do i = 1,nao
+      if (iocca(i) == 1) ihomoa = i
+      if (ioccb(i) == 1) ihomob = i
+    end do
+    do i = 1,nao
+      if (i < ihomoa) then
+        if (iocca(i) == 0) nmaxa(i) = 0
+      end if
+      if (i < ihomob) then
+        if (ioccb(i) == 0) nmaxb(i) = 0
+      end if
+    end do
 
-    deallocate(ioccb,iocca)
-    deallocate(iocc)
+    deallocate (ioccb,iocca)
+    deallocate (iocc)
   end subroutine occ_nmax
 
 !=========================================================================================!
@@ -895,8 +895,8 @@ contains
     bkt = boltz * t
 
     e_fermi = 0.5 * (eig(ihomo) + eig(ihomo + 1))
-    nholes = count((nmax(:)<1),1)
-    occt = ihomo -  nholes
+    nholes = count((nmax(:) < 1),1)
+    occt = ihomo - nholes
 
     do ncycle = 1,200
       total_number = 0.0
@@ -907,10 +907,16 @@ contains
 
         deigkt = (eig(i) - e_fermi) / bkt
 
-        if ((nmax(i) > 0) .AND. (deigkt .lt. 50)) then
-          fermifunct = 1.0 / (exp(deigkt) + 1.0)
-          dfermifunct = exp(deigkt) / &
-          &       (bkt * (exp(deigkt) + 1.0)**2)
+        if ((deigkt .lt. 50)) then
+          if ((nmax(i) > 0)) then !> smear electrons
+            fermifunct = 1.0 / (exp(deigkt) + 1.0)
+            dfermifunct = exp(deigkt) / &
+            &       (bkt * (exp(deigkt) + 1.0)**2)
+          else !> smear holes
+            fermifunct = 1.0 - (1.0 / (exp(deigkt) + 1.0))
+            dfermifunct = -(exp(deigkt) / &
+            &       (bkt * (exp(deigkt) + 1.0)**2))
+          end if
         end if
         occ(i) = fermifunct
         total_number = total_number + fermifunct
@@ -938,15 +944,15 @@ contains
       write (*,'('' t,e(fermi),nfod : '',2f10.3,f10.6)') t,e_fermi,fod
     end if
 
-    if(present(ef)) ef = e_fermi
-    if(present(TS)) TS = s
+    if (present(ef)) ef = e_fermi
+    if (present(TS)) TS = s
 
   end subroutine fermismear_nmax
 !=========================================================================================!
   subroutine dmat(ndim,focc,C,P)
-  !> density matrix
-  !> C: MO coefficient
-  !> P  dmat
+    !> density matrix
+    !> C: MO coefficient
+    !> P  dmat
     use math_wrapper,only:gemm
     integer,intent(in)  :: ndim
     real(wp),intent(in)  :: focc(:)

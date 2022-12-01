@@ -160,7 +160,7 @@ endif
 ## ========================================= ##  
 
 if get_option('with_gbsa')
-add_project_arguments('-DWITH_TBLITE', language: 'fortran')
-subdir('gbsa')
+add_project_arguments('-DWITH_GBSA', language: 'fortran')
+#subdir('gbsa')
 endif
 

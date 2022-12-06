@@ -891,6 +891,8 @@ contains
     real(wp),parameter :: thr = 1.d-9
     integer :: ncycle,i,j,m,k,i1,i2,nholes
     real(wp) :: deigkt
+    !integer :: nfermi,ncycle2
+    !real(wp),allocatable :: efermis(:),occsum(:)
 
     bkt = boltz * t
 
@@ -899,33 +901,33 @@ contains
     occt = ihomo - nholes
 
     do ncycle = 1,200
-      total_number = 0.0
-      total_dfermi = 0.0
-      do i = 1,norbs
-        fermifunct = 0.0
-        dfermifunct = 0.0
+        total_number = 0.0
+        total_dfermi = 0.0
+        do i = 1,norbs
+          fermifunct = 0.0
+          dfermifunct = 0.0
 
-        deigkt = (eig(i) - e_fermi) / bkt
+          deigkt = (eig(i) - e_fermi) / bkt
 
-        if ((deigkt .lt. 50)) then
-          if ((nmax(i) > 0)) then !> smear electrons
-            fermifunct = 1.0 / (exp(deigkt) + 1.0)
-            dfermifunct = exp(deigkt) / &
-            &       (bkt * (exp(deigkt) + 1.0)**2)
-          else !> smear holes
-            fermifunct = 1.0 - (1.0 / (exp(deigkt) + 1.0))
-            dfermifunct = -(exp(deigkt) / &
-            &       (bkt * (exp(deigkt) + 1.0)**2))
+          if ((deigkt .lt. 50)) then
+            if ((nmax(i) > 0)) then !> smear electrons
+              fermifunct = 1.0 / (exp(deigkt) + 1.0)
+              dfermifunct = exp(deigkt) / &
+              &       (bkt * (exp(deigkt) + 1.0)**2)
+            else !> smear holes
+              fermifunct = 1.0 - (1.0 / (exp(deigkt) + 1.0))
+              dfermifunct = -(exp(deigkt) / &
+              &       (bkt * (exp(deigkt) + 1.0)**2))
+            end if
           end if
-        end if
-        occ(i) = fermifunct
-        total_number = total_number + fermifunct
-        total_dfermi = total_dfermi + dfermifunct
+          occ(i) = fermifunct
+          total_number = total_number + fermifunct
+          total_dfermi = total_dfermi + dfermifunct
+        end do
+        change_fermi = (occt - total_number) / total_dfermi
+        e_fermi = e_fermi + change_fermi
+        if (abs(occt - total_number) .le. thr) exit
       end do
-      change_fermi = (occt - total_number) / total_dfermi
-      e_fermi = e_fermi + change_fermi
-      if (abs(occt - total_number) .le. thr) exit
-    end do
 
     fod = 0
     s = 0

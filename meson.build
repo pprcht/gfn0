@@ -1,7 +1,7 @@
 project(
   'gfn0',
   'fortran', 'c',
-  version: '3.0',
+  version: '0.1',
   license: 'LGPL-3.0-or-later',
   meson_version: '>=0.63',
   default_options: [
@@ -56,6 +56,3 @@ gfn0_exe = executable(
 )
 endif
 
-
-# add the testsuite separate meson.build 
-#subdir('testsuite') #has to be filled with tests, not availabel yet

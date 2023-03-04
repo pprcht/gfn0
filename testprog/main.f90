@@ -1,4 +1,22 @@
-program gfn0_main
+!================================================================================!
+! This file is part of gfn0.
+!
+! Copyright (C) 2022-2023 Philipp Pracht
+!
+! gfn0 is free software: you can redistribute it and/or modify it under
+! the terms of the GNU Lesser General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! gfn0 is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU Lesser General Public License for more details.
+!
+! You should have received a copy of the GNU Lesser General Public License
+! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
+!================================================================================!
+program gfn0_main_tester
     use iso_fortran_env, only: wp=>real64,stdout=>output_unit
     use testmol
     use gfn0_module
@@ -188,4 +206,4 @@ program gfn0_main
    deallocate(gradient)
    deallocate(xyz,at)
 !=======================================================================================!
-end program gfn0_main
+end program gfn0_main_tester

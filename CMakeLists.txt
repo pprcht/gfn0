@@ -1,12 +1,12 @@
-# This file is part of crest.
+# This file is part of gfn0.
 # SPDX-Identifier: LGPL-3.0-or-later
 #
-# crest is free software: you can redistribute it and/or modify it under
+# gfn0 is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# crest is distributed in the hope that it will be useful,
+# gfn0 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
@@ -16,7 +16,7 @@ cmake_minimum_required(VERSION 3.14)
 project(
   "gfn0"
   LANGUAGES "Fortran" "C"
-  VERSION "3.0"
+  VERSION "0.1"
 )
 
 
@@ -66,7 +66,7 @@ list(
 
 
 #
-# CREST sources
+# gfn0 sources
 #
 set(srcs)
 add_subdirectory("src")
@@ -113,18 +113,18 @@ IF(BUILD_EXE)
 set(srcs2)
 add_subdirectory("testprog")
 add_executable(
-  ${PROJECT_NAME}-exe
+  ${PROJECT_NAME}-tester
   "${srcs2}" 
 )
 set_target_properties(
-  ${PROJECT_NAME}-exe
+  ${PROJECT_NAME}-tester
   PROPERTIES
   Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/include
   RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
-  OUTPUT_NAME "${PROJECT_NAME}"
+  OUTPUT_NAME "${PROJECT_NAME}-tester"
 )
 target_link_libraries(
-  ${PROJECT_NAME}-exe
+  ${PROJECT_NAME}-tester
   PRIVATE
   "${PROJECT_NAME}-lib"
 )

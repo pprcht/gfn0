@@ -58,7 +58,4 @@ subroutine writetestcoord
 
 end subroutine writetestcoord
 
-
-
-
 end module testmol

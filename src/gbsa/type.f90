@@ -1,7 +1,7 @@
 !================================================================================!
 ! This file is part of gfn0.
 !
-! Copyright (C) 2022 Philipp Pracht
+! Copyright (C) 2022-2023 Philipp Pracht
 !
 ! gfn0 is free software: you can redistribute it and/or modify it under
 ! the terms of the GNU Lesser General Public License as published by

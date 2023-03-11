@@ -23,7 +23,7 @@
 module eeq_module
 !> Implementation of the electronegativity equilibration model
    use iso_fortran_env, only: wp=>real64
-   use math_wrapper
+   use gfn0_math_wrapper
 #ifdef WITH_GBSA
    use solvation_solv_gbsa, only: TBorn
 #endif

@@ -1,7 +1,7 @@
 !================================================================================!
 ! This file is part of gfn0.
 !
-! Copyright (C) 2022-2023 Philipp Pracht
+! Copyright (C) 2023 Philipp Pracht
 !
 ! gfn0 is free software: you can redistribute it and/or modify it under
 ! the terms of the GNU Lesser General Public License as published by
@@ -16,11 +16,11 @@
 ! You should have received a copy of the GNU Lesser General Public License
 ! along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
 !================================================================================!
-module math_wrapper
-!> module math_wrapper
+module gfn0_math_wrapper
+!> module gfn0_math_wrapper
 !> contains some interfaces to LAPACK and BLAS routines
 !> which must be included via a suitable library.
-  use iso_fortran_env,only:wp => real64,sp => real32
+  use iso_fortran_env,only:wp => real64,sp => real32,stderr => error_unit
   implicit none
   public
 
@@ -50,15 +50,74 @@ module math_wrapper
     module procedure dgemm_wrap
   end interface gemm
 
-  interface lapack_sytrf
+  interface sytrf_wrap
     module procedure ssytrf_wrap
     module procedure dsytrf_wrap
+  end interface sytrf_wrap
+  interface lapack_sytrf
+    pure subroutine ssytrf(uplo,n,a,lda,ipiv,work,lwork,info)
+      import :: sp
+      real(sp),intent(inout) :: a(lda,*)
+      character(len=1),intent(in) :: uplo
+      integer,intent(out) :: ipiv(*)
+      integer,intent(out) :: info
+      integer,intent(in) :: n
+      integer,intent(in) :: lda
+      real(sp),intent(inout) :: work(*)
+      integer,intent(in) :: lwork
+    end subroutine ssytrf
+    pure subroutine dsytrf(uplo,n,a,lda,ipiv,work,lwork,info)
+      import :: wp
+      real(wp),intent(inout) :: a(lda,*)
+      character(len=1),intent(in) :: uplo
+      integer,intent(out) :: ipiv(*)
+      integer,intent(out) :: info
+      integer,intent(in) :: n
+      integer,intent(in) :: lda
+      real(wp),intent(inout) :: work(*)
+      integer,intent(in) :: lwork
+    end subroutine dsytrf
   end interface lapack_sytrf
 
   interface lapack_sytri
     module procedure ssytri_wrap
     module procedure dsytri_wrap
   end interface lapack_sytri
+
+  interface sytrs_wrap
+    module procedure ssytrs_wrap
+    module procedure ssytrs1_wrap
+    module procedure ssytrs3_wrap
+    module procedure dsytrs_wrap
+    module procedure dsytrs1_wrap
+    module procedure dsytrs3_wrap
+  end interface sytrs_wrap
+  interface lapack_sytrs
+    pure subroutine ssytrs(uplo,n,nrhs,a,lda,ipiv,b,ldb,info)
+      import :: sp
+      real(sp),intent(in) :: a(lda,*)
+      real(sp),intent(inout) :: b(ldb,*)
+      integer,intent(in) :: ipiv(*)
+      character(len=1),intent(in) :: uplo
+      integer,intent(out) :: info
+      integer,intent(in) :: n
+      integer,intent(in) :: nrhs
+      integer,intent(in) :: lda
+      integer,intent(in) :: ldb
+    end subroutine ssytrs
+    pure subroutine dsytrs(uplo,n,nrhs,a,lda,ipiv,b,ldb,info)
+      import :: wp
+      real(wp),intent(in) :: a(lda,*)
+      real(wp),intent(inout) :: b(ldb,*)
+      integer,intent(in) :: ipiv(*)
+      character(len=1),intent(in) :: uplo
+      integer,intent(out) :: info
+      integer,intent(in) :: n
+      integer,intent(in) :: nrhs
+      integer,intent(in) :: lda
+      integer,intent(in) :: ldb
+    end subroutine dsytrs
+  end interface lapack_sytrs
 
   interface lapack_sygvd
     module procedure ssygvd_wrap
@@ -70,22 +129,22 @@ contains
 !========================================================================================!
 
 !> Determinat of 3×3 matrix
-pure function matDet3x3(a) result (det)
+  pure function matDet3x3(a) result(det)
 
-   !> Matrix
-   real(wp), intent(in) :: a(3, 3)
+    !> Matrix
+    real(wp),intent(in) :: a(3,3)
 
-   !> Determinant
-   real(wp) :: det
+    !> Determinant
+    real(wp) :: det
 
-   det =  a(1, 1) * a(2, 2) * a(3, 3)  &
-      & - a(1, 1) * a(2, 3) * a(3, 2)  &
-      & - a(1, 2) * a(2, 1) * a(3, 3)  &
-      & + a(1, 2) * a(2, 3) * a(3, 1)  &
-      & + a(1, 3) * a(2, 1) * a(3, 2)  &
-      & - a(1, 3) * a(2, 2) * a(3, 1)
+    det = a(1,1)*a(2,2)*a(3,3)  &
+       & -a(1,1)*a(2,3)*a(3,2)  &
+       & -a(1,2)*a(2,1)*a(3,3)  &
+       & +a(1,2)*a(2,3)*a(3,1)  &
+       & +a(1,3)*a(2,1)*a(3,2)  &
+       & -a(1,3)*a(2,2)*a(3,1)
 
-end function matDet3x3
+  end function matDet3x3
 
 !========================================================================================!
   subroutine contract312(amat,bvec,cvec,alpha,beta)
@@ -108,10 +167,10 @@ end function matDet3x3
     bb = 0.0_wp
     if (present(beta)) bb = beta
 
-    nn = size(amat,dim=1) * size(amat,dim=2)
+    nn = size(amat,dim=1)*size(amat,dim=2)
     mm = size(amat,dim=3)
-    aptr(1:size(amat,dim=1) * size(amat,dim=2),1:size(amat,dim=3)) => amat
-    cptr(1:size(cvec,dim=1) * size(cvec,dim=2)) => cvec
+    aptr(1:size(amat,dim=1)*size(amat,dim=2),1:size(amat,dim=3)) => amat
+    cptr(1:size(cvec,dim=1)*size(cvec,dim=2)) => cvec
 
     call dgemv('n',nn,mm,aa,aptr,nn,bvec,1,bb,cptr,1)
 
@@ -137,11 +196,11 @@ end function matDet3x3
     bb = 0.0_wp
     if (present(beta)) bb = beta
 
-    nn = size(amat,dim=1) * size(amat,dim=2)
+    nn = size(amat,dim=1)*size(amat,dim=2)
     mm = size(amat,dim=3)
     kk = size(cmat,dim=3)
-    aptr(1:size(amat,dim=1) * size(amat,dim=2),1:size(amat,dim=3)) => amat
-    cptr(1:size(cmat,dim=1) * size(cmat,dim=2),1:size(cmat,dim=3)) => cmat
+    aptr(1:size(amat,dim=1)*size(amat,dim=2),1:size(amat,dim=3)) => amat
+    cptr(1:size(cmat,dim=1)*size(cmat,dim=2),1:size(cmat,dim=3)) => cmat
 
     call dgemm('n','n',nn,kk,mm,aa,aptr,nn,bmat,mm,bb,cptr,nn)
 
@@ -256,32 +315,107 @@ end function matDet3x3
 !>  where U (or L) is a product of permutation and unit upper (lower)
 !>  triangular matrices, and D is symmetric and block diagonal with
 !>  1-by-1 and 2-by-2 diagonal blocks.
-  subroutine ssytrf_wrap(uplo,n,a,lda,ipiv,work,lwork,info)
-    real(sp),intent(inout) :: a(lda,*)
-    character(len=1),intent(in) :: uplo
-    integer,intent(out) :: ipiv(*)
+
+!  subroutine ssytrf_wrap(uplo,n,a,lda,ipiv,work,lwork,info)
+!    real(sp),intent(inout) :: a(lda,*)
+!    character(len=1),intent(in) :: uplo
+!    integer,intent(out) :: ipiv(*)
+!    integer,intent(out) :: info
+!    integer,intent(in) :: n
+!    integer,intent(in) :: lda
+!    real(sp),intent(inout) :: work(*)
+!    integer,intent(in) :: lwork
+!    !> LAPACK
+!    external :: ssytrf
+!    call ssytrf(uplo,n,a,lda,ipiv,work,lwork,info)
+!  end subroutine ssytrf_wrap
+  subroutine ssytrf_wrap(amat,ipiv,info,uplo)
+    character(len=*),parameter :: source = 'lapack_sytrf'
+    real(sp),intent(inout) :: amat(:,:)
+    integer,intent(out) :: ipiv(:)
     integer,intent(out) :: info
-    integer,intent(in) :: n
-    integer,intent(in) :: lda
-    real(sp),intent(inout) :: work(*)
-    integer,intent(in) :: lwork
-    !> LAPACK
-    external :: ssytrf
-    call ssytrf(uplo,n,a,lda,ipiv,work,lwork,info)
+    character(len=1),intent(in),optional :: uplo
+    character(len=1) :: ula
+    integer :: n,lda,lwork,stat_alloc,stat_dealloc
+    real(sp),allocatable :: work(:)
+    real(sp) :: test(1)
+    if (present(uplo)) then
+      ula = uplo
+    else
+      ula = 'u'
+    end if
+    lda = max(1,size(amat,1))
+    n = size(amat,2)
+    stat_alloc = 0
+    lwork = -1
+    call lapack_sytrf(ula,n,amat,lda,ipiv,test,lwork,info)
+    if (info == 0) then
+      lwork = nint(test(1))
+      if (stat_alloc == 0) then
+        allocate (work(lwork),stat=stat_alloc)
+      end if
+      if (stat_alloc == 0) then
+        call lapack_sytrf(ula,n,amat,lda,ipiv,work,lwork,info)
+      else
+        info = -1000
+      end if
+      deallocate (work,stat=stat_dealloc)
+    end if
+    if (info /= 0) then
+      write (stderr,'("Factorisation of matrix failed ",a)') source
+    end if
   end subroutine ssytrf_wrap
-  subroutine dsytrf_wrap(uplo,n,a,lda,ipiv,work,lwork,info)
-    real(wp),intent(inout) :: a(lda,*)
-    character(len=1),intent(in) :: uplo
-    integer,intent(out) :: ipiv(*)
+
+!  subroutine dsytrf_wrap(uplo,n,a,lda,ipiv,work,lwork,info)
+!    real(wp),intent(inout) :: a(lda,*)
+!    character(len=1),intent(in) :: uplo
+!    integer,intent(out) :: ipiv(*)
+!    integer,intent(out) :: info
+!    integer,intent(in) :: n
+!    integer,intent(in) :: lda
+!    real(wp),intent(inout) :: work(*)
+!    integer,intent(in) :: lwork
+!    !> LAPACK
+!    external :: dsytrf
+!    call dsytrf(uplo,n,a,lda,ipiv,work,lwork,info)
+!  end subroutine dsytrf_wrap
+  subroutine dsytrf_wrap(amat,ipiv,info,uplo)
+    character(len=*),parameter :: source = 'lapack_sytrf'
+    real(wp),intent(inout) :: amat(:,:)
+    integer,intent(out) :: ipiv(:)
     integer,intent(out) :: info
-    integer,intent(in) :: n
-    integer,intent(in) :: lda
-    real(wp),intent(inout) :: work(*)
-    integer,intent(in) :: lwork
-    !> LAPACK
-    external :: dsytrf
-    call dsytrf(uplo,n,a,lda,ipiv,work,lwork,info)
+    character(len=1),intent(in),optional :: uplo
+    character(len=1) :: ula
+    integer :: n,lda,lwork,stat_alloc,stat_dealloc
+    real(wp),allocatable :: work(:)
+    real(wp) :: test(1)
+    if (present(uplo)) then
+      ula = uplo
+    else
+      ula = 'u'
+    end if
+    lda = max(1,size(amat,1))
+    n = size(amat,2)
+    stat_alloc = 0
+    lwork = -1
+    call lapack_sytrf(ula,n,amat,lda,ipiv,test,lwork,info)
+    if (info == 0) then
+      lwork = nint(test(1))
+      if (stat_alloc == 0) then
+        allocate (work(lwork),stat=stat_alloc)
+      end if
+      if (stat_alloc == 0) then
+        call lapack_sytrf(ula,n,amat,lda,ipiv,work,lwork,info)
+      else
+        info = -1000
+      end if
+      deallocate (work,stat=stat_dealloc)
+    end if
+    if (info /= 0) then
+      write (stderr,'("Factorisation of matrix failed ",a)') source
+    end if
   end subroutine dsytrf_wrap
+
 !=======================================================================================!
 !> SYTRI computes the inverse of a real symmetric indefinite matrix
 !> A using the factorization A = U*D*U**T or A = L*D*L**T computed by
@@ -310,7 +444,106 @@ end function matDet3x3
     external :: dsytri
     call dsytri(uplo,n,a,lda,ipiv,work,info)
   end subroutine dsytri_wrap
+
 !=======================================================================================!
+!> DSYTRS solves a system of linear equations A*X = B with a real
+!> symmetric matrix A using the factorization A = U*D*U**T or
+!>  A = L*D*L**T computed by DSYTRF.
+  subroutine ssytrs_wrap(amat,bmat,ipiv,info,uplo)
+    character(len=*),parameter :: source = 'lapack_sytrs'
+    real(sp),intent(in) :: amat(:,:)
+    real(sp),intent(inout) :: bmat(:,:)
+    integer,intent(in) :: ipiv(:)
+    integer,intent(out) :: info
+    character(len=1),intent(in),optional :: uplo
+    character(len=1) :: ula
+    integer :: n,nrhs,lda,ldb
+    if (present(uplo)) then
+      ula = uplo
+    else
+      ula = 'u'
+    end if
+    lda = max(1,size(amat,1))
+    ldb = max(1,size(bmat,1))
+    n = size(amat,2)
+    nrhs = size(bmat,2)
+    call lapack_sytrs(ula,n,nrhs,amat,lda,ipiv,bmat,ldb,info)
+    if (info /= 0) then
+      write (stderr,'("Solving linear system failed ",a)') source
+    end if
+  end subroutine ssytrs_wrap
+  subroutine ssytrs1_wrap(amat,bvec,ipiv,info,uplo)
+    real(sp),intent(in) :: amat(:,:)
+    real(sp),intent(inout),target :: bvec(:)
+    integer,intent(in) :: ipiv(:)
+    integer,intent(out) :: info
+    character(len=1),intent(in),optional :: uplo
+    real(sp),pointer :: bptr(:,:)
+    bptr(1:size(bvec),1:1) => bvec
+    call ssytrs_wrap(amat,bptr,ipiv,info,uplo)
+  end subroutine ssytrs1_wrap
+  subroutine ssytrs3_wrap(amat,bmat,ipiv,info,uplo)
+    real(sp),intent(in) :: amat(:,:)
+    real(sp),intent(inout),contiguous,target :: bmat(:,:,:)
+    integer,intent(in) :: ipiv(:)
+    integer,intent(out) :: info
+    character(len=1),intent(in),optional :: uplo
+    real(sp),pointer :: bptr(:,:)
+    bptr(1:size(bmat,1),1:size(bmat,2)*size(bmat,3)) => bmat
+    call ssytrs_wrap(amat,bptr,ipiv,info,uplo)
+  end subroutine ssytrs3_wrap
+
+  subroutine dsytrs_wrap(amat,bmat,ipiv,info,uplo)
+    character(len=*),parameter :: source = 'lapack_sytrs'
+    real(wp),intent(in) :: amat(:,:)
+    real(wp),intent(inout) :: bmat(:,:)
+    integer,intent(in) :: ipiv(:)
+    integer,intent(out) :: info
+    character(len=1),intent(in),optional :: uplo
+    character(len=1) :: ula
+    integer :: n,nrhs,lda,ldb
+    if (present(uplo)) then
+      ula = uplo
+    else
+      ula = 'u'
+    end if
+    lda = max(1,size(amat,1))
+    ldb = max(1,size(bmat,1))
+    n = size(amat,2)
+    nrhs = size(bmat,2)
+    call lapack_sytrs(ula,n,nrhs,amat,lda,ipiv,bmat,ldb,info)
+    if (info /= 0) then
+      write (stderr,'("Solving linear system failed ",a)') source
+    end if
+  end subroutine dsytrs_wrap
+  subroutine dsytrs1_wrap(amat,bvec,ipiv,info,uplo)
+    real(wp),intent(in) :: amat(:,:)
+    real(wp),intent(inout),target :: bvec(:)
+    integer,intent(in) :: ipiv(:)
+    integer,intent(out) :: info
+    character(len=1),intent(in),optional :: uplo
+    real(wp),pointer :: bptr(:,:)
+    bptr(1:size(bvec),1:1) => bvec
+    call dsytrs_wrap(amat,bptr,ipiv,info,uplo)
+  end subroutine dsytrs1_wrap
+  subroutine dsytrs3_wrap(amat,bmat,ipiv,info,uplo)
+    real(wp),intent(in) :: amat(:,:)
+    real(wp),intent(inout),contiguous,target :: bmat(:,:,:)
+    integer,intent(in) :: ipiv(:)
+    integer,intent(out) :: info
+    character(len=1),intent(in),optional :: uplo
+    real(wp),pointer :: bptr(:,:)
+    bptr(1:size(bmat,1),1:size(bmat,2)*size(bmat,3)) => bmat
+    call dsytrs_wrap(amat,bptr,ipiv,info,uplo)
+  end subroutine dsytrs3_wrap
+
+!=======================================================================================!
+!> DGEMV  performs one of the matrix-vector operations
+!>
+!>    y := alpha*A*x + beta*y,   or   y := alpha*A**T*x + beta*y,
+!>
+!> where alpha and beta are scalars, x and y are vectors and A is an
+!> m by n matrix.
   subroutine sgemv_wrap(amat,xvec,yvec,alpha,beta,trans)
     real(sp),intent(in) :: amat(:,:)
     real(sp),intent(in) :: xvec(:)
@@ -394,11 +627,11 @@ end function matDet3x3
       tra = 'n'
     end if
     if (any(tra == ['n','N'])) then
-      aptr(1:size(amat,1) * size(amat,2),1:size(amat,3)) => amat
-      yptr(1:size(yvec,1) * size(yvec,2)) => yvec
+      aptr(1:size(amat,1)*size(amat,2),1:size(amat,3)) => amat
+      yptr(1:size(yvec,1)*size(yvec,2)) => yvec
     else
-      aptr(1:size(amat,1),1:size(amat,2) * size(amat,3)) => amat
-      yptr(1:size(yvec,1) * size(yvec,2)) => yvec
+      aptr(1:size(amat,1),1:size(amat,2)*size(amat,3)) => amat
+      yptr(1:size(yvec,1)*size(yvec,2)) => yvec
     end if
     call dgemv_wrap(aptr,xvec,yptr,alpha,beta,tra)
   end subroutine dgemv312_wrap
@@ -464,7 +697,7 @@ end function matDet3x3
     else
       trb = 'n'
     end if
-    if ((tra .eq. 'n' .or. tra .eq. 'N')) then
+    if ((tra .eq. 'n'.or.tra .eq. 'N')) then
       k = size(amat,2)
     else
       k = size(amat,1)
@@ -528,7 +761,7 @@ end function matDet3x3
     else
       trb = 'n'
     end if
-    if ((tra .eq. 'n' .or. tra .eq. 'N')) then
+    if ((tra .eq. 'n'.or.tra .eq. 'N')) then
       k = size(amat,2)
     else
       k = size(amat,1)
@@ -645,4 +878,4 @@ end function matDet3x3
   end subroutine dsygvd_wrap
 
 !=======================================================================================!
-end module math_wrapper
+end module gfn0_math_wrapper

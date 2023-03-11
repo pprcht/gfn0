@@ -23,7 +23,7 @@
 module gfn0_dftd4
    use iso_fortran_env, only: wp=>real64,stdout=>output_unit
    use gfn0_types, only: TDispersionData
-   use math_wrapper, only: gemv,contract
+   use gfn0_math_wrapper, only: gemv,contract
    use dftd4param, gam=>chemical_hardness
    implicit none
    private

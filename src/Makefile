@@ -6,7 +6,7 @@ OBJDIR = build
  #MKLROOT=/opt/intel/mkl
 #--------------------------------------------------------------------------
 
-SRC1 += math_wrapper.o
+SRC1 += gfn0_math_wrapper.o
 SRC1 += slater_module.o
 SRC1 += wfn_module.o
 SRC1 += cn_module.o

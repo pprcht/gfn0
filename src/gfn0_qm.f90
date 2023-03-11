@@ -544,7 +544,7 @@ contains
 !  eigenvalue solver
 !! ========================================================================
   subroutine solve(ndim,H,S,X,P,e,fail)
-    use math_wrapper,only:lapack_sygvd
+    use gfn0_math_wrapper,only:lapack_sygvd
     !> INPUT
     integer,intent(in)   :: ndim
     real(wp),intent(in)  :: H(ndim * (ndim + 1) / 2)
@@ -955,7 +955,7 @@ contains
     !> density matrix
     !> C: MO coefficient
     !> P  dmat
-    use math_wrapper,only:gemm
+    use gfn0_math_wrapper,only:gemm
     integer,intent(in)  :: ndim
     real(wp),intent(in)  :: focc(:)
     real(wp),intent(in)  :: C(:,:)

@@ -147,7 +147,7 @@ end subroutine build_kab
 
 ! --------------------------------------------------------------[SAW1801]-
 pure subroutine dtrf2(s,li,lj)
-   use math_wrapper
+   use gfn0_math_wrapper
    real(wp),intent(inout) :: s(6,6)
    integer, intent(in)    :: li,lj
    ! CAO-AO transformation

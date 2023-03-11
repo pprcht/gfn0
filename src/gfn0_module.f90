@@ -295,7 +295,7 @@ contains
 !> The SRB term is fully classical and depends on the
 !> atomic CNs.
     use gfn0_srb
-    use math_wrapper,only:contract
+    use gfn0_math_wrapper,only:contract
     implicit none
 
     !> number of atoms of the molecule
@@ -378,7 +378,7 @@ contains
 !> Set up the H0 hamiltonian and overlap,
 !> and from that get the "QM" part of the energy
     use wfn_module
-    use math_wrapper,only:contract
+    use gfn0_math_wrapper,only:contract
     !> INPUT
     integer,intent(in) :: nat
     integer,intent(in) :: at(nat)
@@ -483,7 +483,7 @@ contains
 !> Set up the H0 hamiltonian and overlap,
 !> and from that get the "QM" part of the energy
     use wfn_module
-    use math_wrapper,only:contract
+    use gfn0_math_wrapper,only:contract
     !> INPUT
     integer,intent(in) :: nat
     integer,intent(in) :: at(nat)

@@ -24,7 +24,7 @@ module gfn0_occ
   use gfn0_basisset
   use wfn_module
   use gfn0_qm
-  use math_wrapper,only:contract
+  use gfn0_math_wrapper,only:contract
   implicit none
   private
 

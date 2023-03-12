@@ -1,7 +1,7 @@
 !================================================================================!
 ! This file is part of gfn0.
 !
-! Copyright (C) 2022-2023 Philipp Pracht
+! Copyright (C) 2023 Philipp Pracht
 !
 ! gfn0 is free software: you can redistribute it and/or modify it under
 ! the terms of the GNU Lesser General Public License as published by
@@ -1174,12 +1174,15 @@ subroutine info(self, unit)
    !> Unit for IO
    integer, intent(in) :: unit
 
-   write(unit, '(6x, "*", 1x, a, ":", t40)', advance='no') "Solvation model"
+
+   write(unit, '(8x, a )') repeat('-',50)
+   write(unit, '(8x, a, ":", t40)', advance='no') "Solvation model"
    if (self%alpbet > 0.0_wp) then
       write(unit, '(a)') "ALPB"
    else
       write(unit, '(a)') "GBSA"
    end if
+   write(unit, '(8x, a )') repeat('-',50)
 
    write(unit, '(8x, a, t40, a)') "Solvent", self%solvent
    write(unit, '(8x, a, t40, a)') "Parameter file", self%paramFile

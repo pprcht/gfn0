@@ -464,14 +464,29 @@ contains  !>--- Module routines start here
     logical,intent(out)  :: update
     real(wp),allocatable :: diff(:,:)
     real(wp),parameter :: thr = 1.0d-8
+    integer :: i,j
     update = .false. 
-    allocate(diff(3,nat),source=0.0_wp)
-    diff(:,:) = abs( xyz(:,:) - refxyz(:,:)) 
-    if(any(diff.gt.thr)) then
-      update = .true.
-      refxyz = xyz
-    endif
-    deallocate(diff)
+    !allocate(diff(3,nat),source=0.0_wp)
+    !diff(:,:) = abs( xyz(:,:) - refxyz(:,:)) 
+    !if(any(diff.gt.thr).or.nat==1) then
+    !  update = .true.
+    !  refxyz = xyz
+    !endif
+    !deallocate(diff)
+    if(nat==1)then
+       update = .true. 
+       return 
+    endif 
+    ILOOP : do i=1,nat
+      JLOOP : do j=1,3
+         if(abs( xyz(j,i) - refxyz(j,i)).gt.thr)then
+            update = .true.
+            refxyz = xyz
+            exit ILOOP
+         endif
+      enddo JLOOP
+    enddo ILOOP
   end subroutine check_geo
+
 !========================================================================================!
 end module gfn0_interface

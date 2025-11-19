@@ -85,7 +85,7 @@ if la_backend == 'mkl' or la_backend == 'mkl-static'
       if get_option('openmp')
         libmkl_exe += cc.find_library('mkl_gnu_thread')
       endif
-    elif fc.get_id() == 'intel' or fc.get_id() == 'intel-cl'
+    elif fc.get_id() == 'intel' or fc.get_id() == 'intel-cl' of fc.get_id() == 'intel-llvm'
       libmkl_exe = [cc.find_library('mkl_intel_lp64')]
       if get_option('openmp')
         libmkl_exe += cc.find_library('mkl_intel_thread')

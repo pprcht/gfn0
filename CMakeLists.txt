@@ -10,15 +10,18 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with gfn0.  If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.17)
 
 project(
   "gfn0"
   LANGUAGES "Fortran" "C"
   VERSION "0.1"
+  DESCRIPTION "Standalone GFN0-xTB implementation"
 )
-
 
 # Follow GNU conventions for installing directories
 include(GNUInstallDirs)
@@ -27,54 +30,45 @@ include(GNUInstallDirs)
 set(libs)
 add_subdirectory("config")
 
+###############################################################################
+####################### SUBPROJECTS & DEPENDENCIES ############################
+###############################################################################
 
-#
-# Libraries
-#
-
-# OpenMP dependency
-if(NOT TARGET OpenMP::OpenMP_Fortran AND WITH_OpenMP)
-  find_package(OpenMP REQUIRED)
-  list(
-    APPEND libs
-    OpenMP::OpenMP_Fortran
-  )
-endif()
-
-# BLAS and LAPACK
-if(NOT TARGET BLAS::BLAS)
-  find_package(BLAS REQUIRED)
-  if(NOT TARGET BLAS::BLAS AND BLAS_FOUND)
-    add_library(BLAS::BLAS INTERFACE IMPORTED)
-    target_link_libraries(BLAS::BLAS INTERFACE "${BLAS_LIBRARIES}")
-    target_link_options(BLAS::BLAS INTERFACE "${BLAS_LINKER_FLAGS}")
+# OpenMP parallelization
+if(NOT TARGET "OpenMP::OpenMP_Fortran")
+  if(WITH_OpenMP)
+    find_package("OpenMP" REQUIRED)
+    list(APPEND libs OpenMP::OpenMP_Fortran)
+  else()
+    add_library("OpenMP::OpenMP_Fortran" INTERFACE IMPORTED)
   endif()
 endif()
-if(NOT TARGET LAPACK::LAPACK)
+
+# LAPACK / BLAS
+if(NOT TARGET "LAPACK::LAPACK")
   find_package(LAPACK REQUIRED)
-  if(NOT TARGET LAPACK::LAPACK AND LAPACK_FOUND)
-    add_library(LAPACK::LAPACK INTERFACE IMPORTED)
-    target_link_libraries(LAPACK::LAPACK INTERFACE "${LAPACK_LIBRARIES}")
-    target_link_options(LAPACK::LAPACK INTERFACE "${LAPACK_LINKER_FLAGS}")
-  endif()
 endif()
-list(
-  APPEND libs
-  LAPACK::LAPACK
-  BLAS::BLAS
-)
+if(NOT TARGET "BLAS::BLAS")
+  find_package(BLAS REQUIRED)
+endif()
+list(APPEND libs LAPACK::LAPACK BLAS::BLAS)
 
+# Fortran unit test interface
+if(NOT TARGET "test-drive::test-drive" AND WITH_TESTS)
+  find_package("test-drive" REQUIRED)
+endif()
 
-#
+if(WITH_GBSA)
+  add_compile_definitions(WITH_GBSA)
+endif()
+
 # gfn0 sources
-#
 set(srcs)
 add_subdirectory("src")
 
-
-#
-# Build the lib
-#
+###############################################################################
+############################### Static Library ################################
+###############################################################################
 add_library(
   "${PROJECT_NAME}-lib"
   "${srcs}"
@@ -101,38 +95,13 @@ target_link_libraries(
   PUBLIC
   "${libs}"
 )
+if(NOT EXISTS "${PROJECT_BINARY_DIR}/include")
+  file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+endif()
 
-IF(WITH_GBSA)
-add_definitions(-DWITH_GBSA)
-ENDIF()
-
-#
-# Executables
-#
-IF(BUILD_EXE)
-set(srcs2)
-add_subdirectory("testprog")
-add_executable(
-  ${PROJECT_NAME}-tester
-  "${srcs2}" 
-)
-set_target_properties(
-  ${PROJECT_NAME}-tester
-  PROPERTIES
-  Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/include
-  RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
-  OUTPUT_NAME "${PROJECT_NAME}-tester"
-)
-target_link_libraries(
-  ${PROJECT_NAME}-tester
-  PRIVATE
-  "${PROJECT_NAME}-lib"
-)
-ENDIF()
-
-#
-# Export targets for other projects
-#
+###############################################################################
+##################### Install and Export Instructions #########################
+###############################################################################
 add_library("${PROJECT_NAME}" INTERFACE)
 target_link_libraries("${PROJECT_NAME}" INTERFACE "${PROJECT_NAME}-lib")
 install(
@@ -161,5 +130,37 @@ install(
   "${CMAKE_CURRENT_BINARY_DIR}/include/"
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${module-dir}"
 )
+install(
+  FILES "COPYING" "COPYING.LESSER"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}"
+)
 
+###############################################################################
+############################### Testprog / Tests ##############################
+###############################################################################
+if(BUILD_EXE OR WITH_TESTS)
+  set(testprog-srcs)
+  add_subdirectory("testprog")
 
+  add_executable(
+    "${PROJECT_NAME}-tester"
+    "${testprog-srcs}"
+  )
+  set_target_properties(
+    "${PROJECT_NAME}-tester"
+    PROPERTIES
+    Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    OUTPUT_NAME "${PROJECT_NAME}-tester"
+  )
+  target_link_libraries(
+    "${PROJECT_NAME}-tester"
+    PRIVATE
+    "${PROJECT_NAME}-lib"
+  )
+endif()
+
+if(WITH_TESTS)
+  enable_testing()
+  add_test("${PROJECT_NAME}/singlepoint" "${PROJECT_NAME}-tester")
+endif()

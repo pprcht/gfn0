@@ -1,7 +1,9 @@
+# This file is part of gfn0.
+# SPDX-Identifier: LGPL-3.0-or-later
 
-IF(WITH_GBSA)
-add_subdirectory("gbsa")
-ENDIF()
+if(WITH_GBSA)
+  add_subdirectory("gbsa")
+endif()
 
 set(dir "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -19,8 +21,9 @@ list(APPEND srcs
   "${dir}/gfn0_param.f90"
   "${dir}/gfn0_basis.f90"
   "${dir}/gfn0_qm.f90"
+  "${dir}/gfn0_gbsa.F90"
   "${dir}/gfn0_prints.f90"
-  "${dir}/gfn0_gbsa.F90" 
+  #  "${dir}/gfn0_lidep.f90"
   "${dir}/gfn0_occ.f90"
   "${dir}/gfn0_module.f90"
   "${dir}/gfn0_interface.f90"

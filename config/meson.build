@@ -89,6 +89,6 @@ if static_build
   elif fc_id == 'intel'
     add_project_link_arguments('-static-intel', '-qopenmp-link=static', language : 'fortran')
   elif fc_id == 'intel-llvm'
-    add_project_link_arguments('-static-intel', '-qopenmp-link=static', language : 'fortran')
+    add_project_link_arguments('-static', language : 'fortran')
   endif
 endif

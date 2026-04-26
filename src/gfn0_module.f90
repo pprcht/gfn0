@@ -195,7 +195,7 @@ contains
     real(wp),allocatable :: dccndr(:,:,:)
 
     !> dummy argument
-    real(wp) :: edum
+    real(wp) :: edum = 0.0_wp
     real(wp),allocatable :: gdum(:,:)
     integer :: i
 

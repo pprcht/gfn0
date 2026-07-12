@@ -781,7 +781,7 @@ pure subroutine get_overlap(icao,jcao,naoi,naoj,ishtyp,jshtyp,ri,rj,point,intcut
          if(est.gt.intcut) cycle
          kab = exp(-est)*(sqrtpi*sqrt(ab))**3
          rp = (alpi*ri + alpj*rj)*ab
-         do k = 0, ishtyp + jshtyp
+         do k = 0, ishtyp + jshtyp + 2
             t(k) = olapp(k, alpi+alpj)
          end do
          ! now compute integrals

@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.17)
 project(
   "gfn0"
   LANGUAGES "Fortran" "C"
-  VERSION "0.1"
+  VERSION "0.1.1"
   DESCRIPTION "Standalone GFN0-xTB implementation"
 )
 
